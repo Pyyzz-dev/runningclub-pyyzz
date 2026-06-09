@@ -1,0 +1,402 @@
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export type UserRole = "admin" | "member";
+
+export type PostStatus = "draft" | "published";
+
+export type LeaderboardPeriodType = "weekly" | "monthly" | "yearly" | "all_time";
+
+export type PasswordResetStatus = "pending" | "approved" | "rejected" | "completed";
+
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: string;
+          full_name: string;
+          role: UserRole;
+          avatar_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          full_name: string;
+          role?: UserRole;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          full_name?: string;
+          role?: UserRole;
+          avatar_url?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      posts: {
+        Row: {
+          id: string;
+          title: string;
+          content: string;
+          author_id: string;
+          published_at: string | null;
+          updated_at: string;
+          status: PostStatus;
+          cover_image_url: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          content: string;
+          author_id: string;
+          published_at?: string | null;
+          updated_at?: string;
+          status?: PostStatus;
+          cover_image_url?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          content?: string;
+          author_id?: string;
+          published_at?: string | null;
+          updated_at?: string;
+          status?: PostStatus;
+          cover_image_url?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "posts_author_id_fkey";
+            columns: ["author_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      comments: {
+        Row: {
+          id: string;
+          post_id: string;
+          user_id: string;
+          content: string;
+          is_anonymous: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          user_id: string;
+          content: string;
+          is_anonymous?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          user_id?: string;
+          content?: string;
+          is_anonymous?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "comments_post_id_fkey";
+            columns: ["post_id"];
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "comments_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      club_history: {
+        Row: {
+          id: string;
+          title: string;
+          content: string;
+          event_date: string;
+          image_url: string | null;
+          order_index: number;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          content: string;
+          event_date: string;
+          image_url?: string | null;
+          order_index?: number;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          content?: string;
+          event_date?: string;
+          image_url?: string | null;
+          order_index?: number;
+        };
+        Relationships: [];
+      };
+      club_info: {
+        Row: {
+          id: string;
+          title: string;
+          content: string;
+          cover_image_url: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title?: string;
+          content: string;
+          cover_image_url?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          content?: string;
+          cover_image_url?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      achievements: {
+        Row: {
+          id: string;
+          title: string;
+          description: string;
+          achieved_date: string;
+          medal_type: string | null;
+          image_url: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description: string;
+          achieved_date: string;
+          medal_type?: string | null;
+          image_url?: string | null;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string;
+          achieved_date?: string;
+          medal_type?: string | null;
+          image_url?: string | null;
+        };
+        Relationships: [];
+      };
+      training_schedule: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          location: string | null;
+          start_time: string;
+          end_time: string | null;
+          created_by: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          location?: string | null;
+          start_time: string;
+          end_time?: string | null;
+          created_by: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string | null;
+          location?: string | null;
+          start_time?: string;
+          end_time?: string | null;
+          created_by?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_schedule_created_by_fkey";
+            columns: ["created_by"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      events: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          location: string | null;
+          event_date: string;
+          registration_deadline: string | null;
+          event_link: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          location?: string | null;
+          event_date: string;
+          registration_deadline?: string | null;
+          event_link?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          location?: string | null;
+          event_date?: string;
+          registration_deadline?: string | null;
+          event_link?: string | null;
+        };
+        Relationships: [];
+      };
+      leaderboard: {
+        Row: {
+          id: string;
+          user_id: string;
+          total_distance_km: number;
+          total_time_minutes: number;
+          average_pace: number | null;
+          period_type: LeaderboardPeriodType;
+          period_start: string;
+          period_end: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          total_distance_km: number;
+          total_time_minutes: number;
+          average_pace?: number | null;
+          period_type: LeaderboardPeriodType;
+          period_start: string;
+          period_end: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          total_distance_km?: number;
+          total_time_minutes?: number;
+          average_pace?: number | null;
+          period_type?: LeaderboardPeriodType;
+          period_start?: string;
+          period_end?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      member_password_reset_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          new_password_hash: string;
+          token: string;
+          expires_at: string;
+          status: PasswordResetStatus;
+          requested_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          new_password_hash: string;
+          token: string;
+          expires_at: string;
+          status?: PasswordResetStatus;
+          requested_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          new_password_hash?: string;
+          token?: string;
+          expires_at?: string;
+          status?: PasswordResetStatus;
+          requested_by?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "member_password_reset_requests_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "member_password_reset_requests_requested_by_fkey";
+            columns: ["requested_by"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+}
+
+export type User = Database["public"]["Tables"]["users"]["Row"];
+export type Post = Database["public"]["Tables"]["posts"]["Row"];
+export type Comment = Database["public"]["Tables"]["comments"]["Row"];
+export type ClubHistory = Database["public"]["Tables"]["club_history"]["Row"];
+export type ClubInfo = Database["public"]["Tables"]["club_info"]["Row"];
+export type Achievement = Database["public"]["Tables"]["achievements"]["Row"];
+export type TrainingSchedule =
+  Database["public"]["Tables"]["training_schedule"]["Row"];
+export type Event = Database["public"]["Tables"]["events"]["Row"];
+export type LeaderboardEntry = Database["public"]["Tables"]["leaderboard"]["Row"];
+
+export type PostWithAuthor = Post & {
+  author: Pick<User, "id" | "full_name" | "avatar_url">;
+};
+
+export type PostWithAuthorEmail = PostWithAuthor & {
+  author: PostWithAuthor["author"] & { email: string | null };
+};
+
+export type PostWithAuthorAndCount = PostWithAuthor & {
+  comment_count: number;
+};
+
+export type CommentWithAuthor = Comment & {
+  author: Pick<User, "id" | "full_name" | "avatar_url">;
+  display_name: string;
+};
+
+export type PostWithComments = PostWithAuthor & {
+  comments: CommentWithAuthor[];
+};
+
+export type LeaderboardWithUser = LeaderboardEntry & {
+  user: Pick<User, "id" | "full_name" | "avatar_url">;
+};
+
+export type DbResult<T> = {
+  data: T | null;
+  error: string | null;
+};

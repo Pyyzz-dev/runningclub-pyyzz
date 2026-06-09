@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400" role="img" aria-label="Running Club">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#99FFFF"/>
+      <stop offset="100%" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="track" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E5E7EB"/>
+      <stop offset="100%" stop-color="#d1d5db"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#sky)"/>
+  <ellipse cx="300" cy="340" rx="280" ry="40" fill="url(#track)"/>
+  <rect x="0" y="300" width="600" height="100" fill="#86efac" opacity="0.35"/>
+  <circle cx="120" cy="80" r="36" fill="#fde047" opacity="0.9"/>
+  <text x="300" y="210" text-anchor="middle" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#1E3A8A">CMC Global Running Club</text>
+  <text x="300" y="250" text-anchor="middle" font-family="system-ui,sans-serif" font-size="16" fill="#2563eb">Thay b±ng £nh running-hero.jpg</text>
+  <text x="420" y="300" font-size="48"><ÃB</text>
+</svg>
