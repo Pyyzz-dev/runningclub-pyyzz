@@ -5,6 +5,7 @@ import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { ClubHistory, ClubInfo } from "@/lib/supabase/types";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
   | { data: T; error?: undefined }
@@ -140,7 +141,23 @@ export async function deleteHistoryEntry(id: string): Promise<ActionResult> {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("club_history").delete().eq("id", id);
+  const { error } = await softDelete(supabase, "club_history", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/history");
+  revalidatePath("/admin/club-info");
+  return { data: undefined };
+}
+
+export async function restoreHistoryEntry(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Unauthorized" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await restore(supabase, "club_history", id);
   if (error) return { error: error.message };
 
   revalidatePath("/history");

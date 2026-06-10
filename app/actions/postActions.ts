@@ -5,6 +5,7 @@ import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { PostStatus, PostWithAuthorEmail } from "@/lib/supabase/types";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { isNotDeleted, restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
   | { data: T; error?: undefined }
@@ -104,9 +105,9 @@ export async function updatePost(
   }
 
   const supabase = await createClient();
-  const { data: existing } = await supabase
-    .from("posts")
-    .select("status, published_at")
+  const { data: existing } = await isNotDeleted(
+    supabase.from("posts").select("status, published_at")
+  )
     .eq("id", id)
     .single();
 
@@ -145,7 +146,24 @@ export async function deletePost(id: string): Promise<ActionResult> {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("posts").delete().eq("id", id);
+  const { error } = await softDelete(supabase, "posts", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/community");
+  revalidatePath("/admin/community");
+  revalidatePath("/admin/dashboard");
+  return { data: undefined };
+}
+
+export async function restorePost(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Unauthorized" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await restore(supabase, "posts", id);
   if (error) return { error: error.message };
 
   revalidatePath("/community");

@@ -3,8 +3,10 @@
 import {
   createTraining,
   deleteTraining,
+  restoreTraining,
   updateTraining,
 } from "@/app/actions/trainingActions";
+import { RestoreButton } from "@/components/admin/RestoreButton";
 import { TrainingFormDialog } from "@/components/admin/TrainingFormDialog";
 import {
   AlertDialog,
@@ -152,8 +154,16 @@ export function TrainingManager({
               </TableRow>
             ) : (
               filtered.map((training) => (
-                <TableRow key={training.id}>
-                  <TableCell className="font-medium">{training.title}</TableCell>
+                <TableRow
+                  key={training.id}
+                  className={training.deleted_at ? "bg-muted/40 opacity-70" : undefined}
+                >
+                  <TableCell className="font-medium">
+                    {training.title}
+                    {training.deleted_at && (
+                      <span className="ml-2 text-xs text-muted-foreground">(Đã xóa)</span>
+                    )}
+                  </TableCell>
                   <TableCell>{training.location}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDateTime(training.start_time)}
@@ -163,25 +173,34 @@ export function TrainingManager({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditTraining(training);
-                          setFormOpen(true);
-                        }}
-                        title="Chỉnh sửa"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(training.id)}
-                        title="Xóa"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {training.deleted_at ? (
+                        <RestoreButton
+                          onRestore={() => restoreTraining(training.id)}
+                          onSuccess={() => router.refresh()}
+                        />
+                      ) : (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditTraining(training);
+                              setFormOpen(true);
+                            }}
+                            title="Chỉnh sửa"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(training.id)}
+                            title="Xóa"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

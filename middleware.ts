@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   "/events",
   "/leaderboard",
   "/login",
+  "/register",
 ];
 
 const PUBLIC_PREFIXES = ["/community"];
@@ -47,6 +48,7 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       return redirectWithSessionCookies(request, supabaseResponse, "/login", {
         redirect: pathname,
+        redirectedFrom: pathname,
       });
     }
     return supabaseResponse;
@@ -56,6 +58,7 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       return redirectWithSessionCookies(request, supabaseResponse, "/login", {
         redirect: pathname,
+        redirectedFrom: pathname,
       });
     }
 

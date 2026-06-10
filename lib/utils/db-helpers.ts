@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "crypto";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
+import { isNotDeleted, softDelete } from "@/lib/utils/softDelete";
 import type {
   Achievement,
   ClubHistory,
@@ -47,6 +48,7 @@ function mapCommentWithAuthor(comment: CommentRowWithUser): CommentWithAuthor {
     content: comment.content,
     is_anonymous: comment.is_anonymous,
     created_at: comment.created_at,
+    deleted_at: comment.deleted_at ?? null,
     author: {
       id: author.id,
       full_name: author.full_name,
@@ -116,15 +118,15 @@ export async function updateOwnPassword(
 export async function getAllPosts(): Promise<DbResult<PostWithAuthorAndCount[]>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("posts")
-    .select(
+  const { data, error } = await isNotDeleted(
+    supabase.from("posts").select(
       `
       *,
       author:users!posts_author_id_fkey(id, full_name, avatar_url),
       comments(count)
     `
     )
+  )
     .eq("status", "published")
     .order("published_at", { ascending: false });
 
@@ -151,9 +153,8 @@ export async function getHomepagePosts(
 ): Promise<DbResult<PostWithAuthorAndCount[]>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("posts")
-    .select(
+  const { data, error } = await isNotDeleted(
+    supabase.from("posts").select(
       `
       id,
       title,
@@ -167,6 +168,7 @@ export async function getHomepagePosts(
       comments(count)
     `
     )
+  )
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(limit);
@@ -194,15 +196,14 @@ export async function getAllPostsAdmin(): Promise<DbResult<PostWithAuthor[]>> {
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("posts")
-    .select(
+  const { data, error } = await isNotDeleted(
+    supabase.from("posts").select(
       `
       *,
       author:users!posts_author_id_fkey(id, full_name, avatar_url)
     `
     )
-    .order("updated_at", { ascending: false });
+  ).order("updated_at", { ascending: false });
 
   return { data: data as PostWithAuthor[] | null, error: error?.message ?? null };
 }
@@ -212,14 +213,14 @@ export async function getPostById(
 ): Promise<DbResult<PostWithComments>> {
   const supabase = await createClient();
 
-  const { data: post, error: postError } = await supabase
-    .from("posts")
-    .select(
+  const { data: post, error: postError } = await isNotDeleted(
+    supabase.from("posts").select(
       `
       *,
       author:users!posts_author_id_fkey(id, full_name, avatar_url)
     `
     )
+  )
     .eq("id", id)
     .single();
 
@@ -227,14 +228,14 @@ export async function getPostById(
     return { data: null, error: postError.message };
   }
 
-  const { data: comments, error: commentsError } = await supabase
-    .from("comments")
-    .select(
+  const { data: comments, error: commentsError } = await isNotDeleted(
+    supabase.from("comments").select(
       `
       *,
       users(id, full_name, avatar_url)
     `
     )
+  )
     .eq("post_id", id)
     .order("created_at", { ascending: true });
 
@@ -331,7 +332,7 @@ export async function deletePost(id: string): Promise<DbResult<boolean>> {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("posts").delete().eq("id", id);
+  const { error } = await softDelete(supabase, "posts", id);
 
   return { data: error ? null : true, error: error?.message ?? null };
 }
@@ -377,7 +378,10 @@ export async function deleteComment(
   const supabase = await createClient();
   const admin = await isAdmin();
 
-  let query = supabase.from("comments").delete().eq("id", commentId);
+  let query = supabase
+    .from("comments")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", commentId);
 
   if (!admin) {
     query = query.eq("user_id", userId);
@@ -393,11 +397,19 @@ export async function deleteComment(
 export async function getHistoryTimeline(): Promise<DbResult<ClubHistory[]>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("club_history")
-    .select("*")
+  const { data, error } = await isNotDeleted(supabase.from("club_history").select("*"))
     .order("order_index", { ascending: true })
     .order("event_date", { ascending: false });
+
+  return { data, error: error?.message ?? null };
+}
+
+export async function getHistoryEventById(id: string): Promise<DbResult<ClubHistory>> {
+  const supabase = await createClient();
+
+  const { data, error } = await isNotDeleted(supabase.from("club_history").select("*"))
+    .eq("id", id)
+    .maybeSingle();
 
   return { data, error: error?.message ?? null };
 }
@@ -446,7 +458,7 @@ export async function deleteHistoryEntry(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("club_history").delete().eq("id", id);
+  const { error } = await softDelete(supabase, "club_history", id);
   return { data: error ? null : true, error: error?.message ?? null };
 }
 
@@ -554,9 +566,13 @@ export async function getUpcomingTraining(
   const supabase = await createClient();
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("training_schedule")
-    .select("id, title, description, location, start_time, end_time, created_by")
+  const { data, error } = await isNotDeleted(
+    supabase
+      .from("training_schedule")
+      .select(
+        "id, title, description, location, start_time, end_time, created_by, deleted_at"
+      )
+  )
     .gte("start_time", now)
     .order("start_time", { ascending: true })
     .limit(limit);
@@ -570,16 +586,77 @@ export async function getUpcomingEvents(
   const supabase = await createClient();
   const now = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from("events")
-    .select(
-      "id, name, description, location, event_date, registration_deadline, event_link"
+  const { data, error } = await isNotDeleted(
+    supabase.from("events").select(
+      "id, name, description, location, event_date, registration_deadline, event_link, participant_count, image_url, deleted_at"
     )
+  )
     .gte("event_date", now)
     .order("event_date", { ascending: true })
     .limit(limit);
 
   return { data, error: error?.message ?? null };
+}
+
+export async function getAllEvents(): Promise<DbResult<Event[]>> {
+  const supabase = await createClient();
+
+  const { data, error } = await isNotDeleted(supabase.from("events").select("*")).order(
+    "event_date",
+    { ascending: false }
+  );
+
+  return { data, error: error?.message ?? null };
+}
+
+export async function updateEvent(
+  id: string,
+  data: EventInsert
+): Promise<DbResult<Event>> {
+  if (!(await isAdmin())) {
+    return { data: null, error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  const supabase = await createClient();
+  const { data: event, error } = await supabase
+    .from("events")
+    .update(data)
+    .eq("id", id)
+    .select()
+    .single();
+
+  return { data: event, error: error?.message ?? null };
+}
+
+export async function deleteEvent(id: string): Promise<DbResult<boolean>> {
+  if (!(await isAdmin())) {
+    return { data: null, error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await softDelete(supabase, "events", id);
+
+  return { data: error ? null : true, error: error?.message ?? null };
+}
+
+export async function updateEventParticipantCount(
+  id: string,
+  count: number
+): Promise<DbResult<Event>> {
+  if (!(await isAdmin())) {
+    return { data: null, error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  const safeCount = Math.max(0, Math.floor(count));
+  const supabase = await createClient();
+  const { data: event, error } = await supabase
+    .from("events")
+    .update({ participant_count: safeCount })
+    .eq("id", id)
+    .select()
+    .single();
+
+  return { data: event, error: error?.message ?? null };
 }
 
 export async function createTrainingSchedule(
@@ -609,10 +686,10 @@ export async function getAllTrainings(filters?: {
   month?: string;
 }): Promise<DbResult<TrainingSchedule[]>> {
   const supabase = await createClient();
-  let query = supabase
-    .from("training_schedule")
-    .select("*")
-    .order("start_time", { ascending: false });
+  let query = isNotDeleted(supabase.from("training_schedule").select("*")).order(
+    "start_time",
+    { ascending: false }
+  );
 
   if (filters?.month) {
     const [year, month] = filters.month.split("-").map(Number);
@@ -652,10 +729,7 @@ export async function deleteTrainingSchedule(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("training_schedule")
-    .delete()
-    .eq("id", id);
+  const { error } = await softDelete(supabase, "training_schedule", id);
 
   return { data: error ? null : true, error: error?.message ?? null };
 }
@@ -865,25 +939,23 @@ export async function getAdminDashboardStats(): Promise<
     upcomingRes,
   ] = await Promise.all([
     supabase.from("users").select("*", { count: "exact", head: true }),
-    supabase
-      .from("posts")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "published"),
-    supabase
-      .from("training_schedule")
-      .select("*", { count: "exact", head: true })
+    isNotDeleted(supabase.from("posts").select("*", { count: "exact", head: true })).eq(
+      "status",
+      "published"
+    ),
+    isNotDeleted(
+      supabase.from("training_schedule").select("*", { count: "exact", head: true })
+    )
       .gte("start_time", now)
       .lte("start_time", thirtyDays),
-    supabase
-      .from("posts")
-      .select(
+    isNotDeleted(
+      supabase.from("posts").select(
         `*, author:users!posts_author_id_fkey(id, full_name, avatar_url)`
       )
+    )
       .order("updated_at", { ascending: false })
       .limit(5),
-    supabase
-      .from("training_schedule")
-      .select("*")
+    isNotDeleted(supabase.from("training_schedule").select("*"))
       .gte("start_time", now)
       .order("start_time", { ascending: true })
       .limit(3),

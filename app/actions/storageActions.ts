@@ -3,6 +3,7 @@
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import {
   STORAGE_BUCKET_NAME,
+  buildEventStoragePath,
   buildStoragePath,
   isStorageSubFolder,
   type StorageSubFolder,
@@ -36,13 +37,16 @@ export async function uploadImage(formData: FormData) {
   }
 
   const folderRaw = String(formData.get("folder") ?? "introduce");
-  const subFolder: StorageSubFolder = isStorageSubFolder(folderRaw)
-    ? folderRaw
-    : "introduce";
-
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const fileName = `${Date.now()}_${safeName}`;
-  const path = buildStoragePath(subFolder, fileName);
+
+  const path =
+    folderRaw === "events"
+      ? buildEventStoragePath(fileName)
+      : buildStoragePath(
+          isStorageSubFolder(folderRaw) ? folderRaw : ("introduce" satisfies StorageSubFolder),
+          fileName
+        );
 
   const supabase = await createClient();
   const { error: uploadError } = await supabase.storage

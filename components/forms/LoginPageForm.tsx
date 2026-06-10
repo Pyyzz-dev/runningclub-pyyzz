@@ -3,9 +3,16 @@
 import { LoginForm } from "@/components/forms/LoginForm";
 import { useSearchParams } from "next/navigation";
 
-export function LoginPageForm() {
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") || "/dashboard";
+interface LoginPageFormProps {
+  showRegisterLink?: boolean;
+}
 
-  return <LoginForm redirectTo={redirectTo} />;
+export function LoginPageForm({ showRegisterLink }: LoginPageFormProps) {
+  const searchParams = useSearchParams();
+  const redirectTo =
+    searchParams.get("redirect") ||
+    searchParams.get("redirectedFrom") ||
+    "/";
+
+  return <LoginForm redirectTo={redirectTo} showRegisterLink={showRegisterLink} />;
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { TrainingSchedule } from "@/lib/supabase/types";
+import { restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
   | { data: T; error?: undefined }
@@ -102,7 +103,24 @@ export async function deleteTraining(id: string): Promise<ActionResult> {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("training_schedule").delete().eq("id", id);
+  const { error } = await softDelete(supabase, "training_schedule", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/training");
+  revalidatePath("/admin/training");
+  revalidatePath("/admin/dashboard");
+  return { data: undefined };
+}
+
+export async function restoreTraining(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+  } catch {
+    return { error: "Unauthorized" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await restore(supabase, "training_schedule", id);
   if (error) return { error: error.message };
 
   revalidatePath("/training");

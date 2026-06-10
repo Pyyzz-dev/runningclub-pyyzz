@@ -6,14 +6,44 @@ export function formatRelativeTime(date: string | Date | null): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
 }
 
+function parseStableDate(date: string | Date): Date {
+  if (date instanceof Date) return date;
+
+  const trimmed = date.trim();
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly;
+    return new Date(Number(year), Number(month) - 1, Number(day));
+  }
+
+  return new Date(trimmed);
+}
+
+/** Extract year without timezone drift (for grouping / timelines). */
+export function getYearFromDateString(date: string): number {
+  const trimmed = date.trim();
+  const match = /^(\d{4})/.exec(trimmed);
+  if (match) return Number(match[1]);
+  return parseStableDate(trimmed).getFullYear();
+}
+
 export function formatDate(date: string | Date | null, pattern = "dd/MM/yyyy"): string {
   if (!date) return "";
-  return format(new Date(date), pattern, { locale: vi });
+  return format(parseStableDate(date), pattern, { locale: vi });
+}
+
+export function formatLongDate(date: string | Date | null): string {
+  if (!date) return "";
+  return format(parseStableDate(date), "EEEE, dd MMMM yyyy", { locale: vi });
+}
+
+export function compareEventDates(a: string, b: string): number {
+  return parseStableDate(a).getTime() - parseStableDate(b).getTime();
 }
 
 export function formatDateTime(date: string | Date | null): string {
   if (!date) return "";
-  return format(new Date(date), "dd/MM/yyyy HH:mm", { locale: vi });
+  return format(parseStableDate(date), "dd/MM/yyyy HH:mm", { locale: vi });
 }
 
 export function truncateText(text: string, maxLength = 150): string {

@@ -16,15 +16,16 @@ export default function LoginPage() {
       containerClassName="max-w-lg"
     >
       <Card className="mx-auto animate-slide-up">
-        <CardHeader>
-          <CardTitle>Chào mừng trở lại</CardTitle>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Đăng nhập</CardTitle>
           <CardDescription>
-            Sử dụng tài khoản do quản trị viên cấp để đăng nhập.
+            Nhập email và mật khẩu để truy cập hệ thống. Tài khoản được kích hoạt sau khi
+            admin phê duyệt đơn đăng ký.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<p className="text-sm text-muted-foreground">Đang tải...</p>}>
-            <LoginPageForm />
+            <LoginPageForm showRegisterLink />
           </Suspense>
         </CardContent>
       </Card>

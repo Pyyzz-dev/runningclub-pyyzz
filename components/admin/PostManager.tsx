@@ -1,6 +1,7 @@
 "use client";
 
-import { deletePost } from "@/app/actions/postActions";
+import { deletePost, restorePost } from "@/app/actions/postActions";
+import { RestoreButton } from "@/components/admin/RestoreButton";
 import dynamic from "next/dynamic";
 import {
   AlertDialog,
@@ -151,9 +152,17 @@ export function PostManager({ posts, className }: PostManagerProps) {
               </TableRow>
             ) : (
               filtered.map((post) => (
-                <TableRow key={post.id}>
+                <TableRow
+                  key={post.id}
+                  className={post.deleted_at ? "bg-muted/40 opacity-70" : undefined}
+                >
                   <TableCell className="max-w-xs truncate font-medium">
                     {post.title}
+                    {post.deleted_at && (
+                      <Badge variant="outline" className="ml-2 text-xs">
+                        Đã xóa
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <div>
@@ -181,37 +190,46 @@ export function PostManager({ posts, className }: PostManagerProps) {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      {post.status === "published" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                          title="Xem bài viết"
-                        >
-                          <Link href={`/community/${post.id}`} target="_blank">
-                            <ExternalLink className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                      {post.deleted_at ? (
+                        <RestoreButton
+                          onRestore={() => restorePost(post.id)}
+                          onSuccess={() => router.refresh()}
+                        />
+                      ) : (
+                        <>
+                          {post.status === "published" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              asChild
+                              title="Xem bài viết"
+                            >
+                              <Link href={`/community/${post.id}`} target="_blank">
+                                <ExternalLink className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setEditPost(post);
+                              setFormOpen(true);
+                            }}
+                            title="Chỉnh sửa"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(post.id)}
+                            title="Xóa"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setEditPost(post);
-                          setFormOpen(true);
-                        }}
-                        title="Chỉnh sửa"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteId(post.id)}
-                        title="Xóa"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

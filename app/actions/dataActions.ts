@@ -6,6 +6,7 @@ import {
   getAllPosts,
   getAllPostsAdmin,
   getCurrentUser,
+  getHistoryEventById,
   getHistoryTimeline,
   getHomepagePosts,
   getLeaderboard,
@@ -33,6 +34,10 @@ export async function fetchPostById(id: string) {
 
 export async function fetchHistoryTimeline() {
   return getHistoryTimeline();
+}
+
+export async function fetchHistoryEventById(id: string) {
+  return getHistoryEventById(id);
 }
 
 export async function fetchAchievements() {

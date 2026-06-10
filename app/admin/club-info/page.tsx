@@ -12,7 +12,7 @@ export default async function AdminClubInfoPage() {
   const [clubInfo, history] = await Promise.all([getClubInfo(), getHistory()]);
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="font-display text-2xl font-bold">Giới thiệu & Lịch sử CLB</h1>
         <p className="text-sm text-muted-foreground">

@@ -6,6 +6,10 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-padding-top: 6rem;
+}
+
 html,
 body {
   margin: 0;
@@ -117,6 +121,30 @@ body {
 
   .section-padding {
     @apply py-8 sm:py-12 md:py-16;
+  }
+
+  .admin-main {
+    @apply w-full max-w-full;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-main {
+    padding: 1rem;
+  }
+
+  .timeline-event {
+    justify-content: flex-start !important;
+  }
+
+  .timeline-event-content {
+    width: calc(100% - 2.5rem) !important;
+    margin-left: 2.5rem !important;
+    text-align: left !important;
+  }
+
+  .timeline-event-content a {
+    text-align: left !important;
   }
 }
 

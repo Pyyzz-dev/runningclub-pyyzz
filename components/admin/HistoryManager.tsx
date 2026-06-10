@@ -4,9 +4,11 @@ import {
   addHistoryEntry,
   deleteHistoryEntry,
   reorderHistoryEntries,
+  restoreHistoryEntry,
   updateHistoryEntry,
 } from "@/app/actions/clubInfoActions";
 import { HistoryFormDialog } from "@/components/admin/HistoryFormDialog";
+import { RestoreButton } from "@/components/admin/RestoreButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,13 +54,18 @@ function SortableHistoryItem({
   item,
   onEdit,
   onDelete,
+  onRestore,
+  onRestored,
 }: {
   item: ClubHistory;
   onEdit: () => void;
   onDelete: () => void;
+  onRestore: () => Promise<{ error?: string }>;
+  onRestored?: () => void;
 }) {
+  const isDeleted = Boolean(item.deleted_at);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: item.id });
+    useSortable({ id: item.id, disabled: isDeleted });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -71,33 +78,48 @@ function SortableHistoryItem({
       style={style}
       className={cn(
         "flex items-center gap-3 rounded-lg border bg-card p-4 dark:border-slate-800 dark:bg-slate-950",
-        isDragging && "opacity-50 shadow-lg"
+        isDragging && "opacity-50 shadow-lg",
+        isDeleted && "bg-muted/40 opacity-70"
       )}
     >
       <button
         type="button"
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-        {...attributes}
-        {...listeners}
+        className={cn(
+          "touch-none text-muted-foreground",
+          isDeleted ? "cursor-not-allowed opacity-40" : "cursor-grab hover:text-foreground"
+        )}
+        {...(isDeleted ? {} : { ...attributes, ...listeners })}
         aria-label="Kéo để sắp xếp"
+        disabled={isDeleted}
       >
         <GripVertical className="h-5 w-5" />
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className="font-medium">{item.title}</p>
+        <p className="font-medium">
+          {item.title}
+          {isDeleted && (
+            <span className="ml-2 text-xs text-muted-foreground">(Đã xóa)</span>
+          )}
+        </p>
         <p className="text-sm text-muted-foreground">
           {formatDate(item.event_date)}
         </p>
       </div>
 
       <div className="flex gap-1">
-        <Button variant="ghost" size="icon" onClick={onEdit} title="Chỉnh sửa">
-          <Edit className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onDelete} title="Xóa">
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
+        {isDeleted ? (
+          <RestoreButton onRestore={onRestore} onSuccess={onRestored} />
+        ) : (
+          <>
+            <Button variant="ghost" size="icon" onClick={onEdit} title="Chỉnh sửa">
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onDelete} title="Xóa">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -216,6 +238,8 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
                     setFormOpen(true);
                   }}
                   onDelete={() => setDeleteId(item.id)}
+                  onRestore={() => restoreHistoryEntry(item.id)}
+                  onRestored={() => router.refresh()}
                 />
               ))}
             </div>

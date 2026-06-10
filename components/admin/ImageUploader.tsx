@@ -2,7 +2,7 @@
 
 import { uploadImage } from "@/app/actions/storageActions";
 import { Button } from "@/components/ui/button";
-import type { StorageSubFolder } from "@/lib/supabase/storage-config";
+import type { StorageUploadFolder } from "@/lib/supabase/storage-config";
 import { cn } from "@/lib/utils";
 import { Loader2, Upload, X } from "lucide-react";
 import Image from "next/image";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 interface ImageUploaderProps {
   onImageUploaded: (url: string) => void;
   currentImage?: string;
-  folder?: StorageSubFolder;
+  folder?: StorageUploadFolder;
   label?: string;
   className?: string;
   showPreview?: boolean;

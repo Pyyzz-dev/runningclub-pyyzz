@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -161,9 +162,10 @@ export function HeroImageSlideshow({ images }: HeroImageSlideshowProps) {
               aria-label={`Xem ảnh ${idx + 1}`}
               aria-current={idx === currentIndex ? "true" : undefined}
               onClick={() => setCurrentIndex(idx)}
-              className={`h-2 rounded-full transition-all ${
+              className={cn(
+                "h-2 rounded-full transition-all",
                 idx === currentIndex ? "w-4 bg-white" : "w-2 bg-white/50"
-              }`}
+              )}
             />
           ))}
         </div>

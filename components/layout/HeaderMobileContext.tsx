@@ -5,8 +5,6 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 interface HeaderMobileContextValue {
   mobileOpen: boolean;
   setMobileOpen: (open: boolean) => void;
-  loginOpen: boolean;
-  setLoginOpen: (open: boolean) => void;
   segment: string | null;
 }
 
@@ -20,12 +18,9 @@ export function HeaderMobileProvider({
   children: ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
 
   return (
-    <HeaderMobileContext.Provider
-      value={{ mobileOpen, setMobileOpen, loginOpen, setLoginOpen, segment }}
-    >
+    <HeaderMobileContext.Provider value={{ mobileOpen, setMobileOpen, segment }}>
       {children}
     </HeaderMobileContext.Provider>
   );

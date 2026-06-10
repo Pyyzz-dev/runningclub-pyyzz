@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
 import {
   addComment as addCommentHelper,
   deleteComment as deleteCommentHelper,
   getCurrentUser,
 } from "@/lib/utils/db-helpers";
+import { restore } from "@/lib/utils/softDelete";
 
 const commentSchema = z.object({
   postId: z.string().uuid("Post ID không hợp lệ"),
@@ -59,4 +61,22 @@ export async function deleteComment(commentId: string, postId: string) {
   }
 
   return result;
+}
+
+export async function restoreComment(commentId: string, postId: string) {
+  const { data: currentUser, error: userError } = await getCurrentUser();
+
+  if (!currentUser || currentUser.role !== "admin") {
+    return { data: null, error: userError ?? "Không có quyền admin" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await restore(supabase, "comments", commentId);
+
+  if (error) {
+    return { data: null, error: error.message };
+  }
+
+  revalidatePath(`/community/${postId}`);
+  return { data: true, error: null };
 }

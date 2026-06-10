@@ -14,28 +14,39 @@ export type LeaderboardPeriodType = "weekly" | "monthly" | "yearly" | "all_time"
 
 export type PasswordResetStatus = "pending" | "approved" | "rejected" | "completed";
 
+export type PendingMemberStatus = "pending" | "approved" | "rejected";
+
 export interface Database {
   public: {
     Tables: {
       users: {
         Row: {
           id: string;
+          email: string | null;
           full_name: string;
+          username: string | null;
           role: UserRole;
+          remarks: string | null;
           avatar_url: string | null;
           created_at: string;
         };
         Insert: {
           id: string;
+          email?: string | null;
           full_name: string;
+          username?: string | null;
           role?: UserRole;
+          remarks?: string | null;
           avatar_url?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
+          email?: string | null;
           full_name?: string;
+          username?: string | null;
           role?: UserRole;
+          remarks?: string | null;
           avatar_url?: string | null;
           created_at?: string;
         };
@@ -51,6 +62,7 @@ export interface Database {
           updated_at: string;
           status: PostStatus;
           cover_image_url: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -61,6 +73,7 @@ export interface Database {
           updated_at?: string;
           status?: PostStatus;
           cover_image_url?: string | null;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -71,6 +84,7 @@ export interface Database {
           updated_at?: string;
           status?: PostStatus;
           cover_image_url?: string | null;
+          deleted_at?: string | null;
         };
         Relationships: [
           {
@@ -89,6 +103,7 @@ export interface Database {
           content: string;
           is_anonymous: boolean;
           created_at: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -97,6 +112,7 @@ export interface Database {
           content: string;
           is_anonymous?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -105,6 +121,7 @@ export interface Database {
           content?: string;
           is_anonymous?: boolean;
           created_at?: string;
+          deleted_at?: string | null;
         };
         Relationships: [
           {
@@ -129,6 +146,7 @@ export interface Database {
           event_date: string;
           image_url: string | null;
           order_index: number;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -137,6 +155,7 @@ export interface Database {
           event_date: string;
           image_url?: string | null;
           order_index?: number;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -145,6 +164,7 @@ export interface Database {
           event_date?: string;
           image_url?: string | null;
           order_index?: number;
+          deleted_at?: string | null;
         };
         Relationships: [];
       };
@@ -208,6 +228,7 @@ export interface Database {
           start_time: string;
           end_time: string | null;
           created_by: string;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -217,6 +238,7 @@ export interface Database {
           start_time: string;
           end_time?: string | null;
           created_by: string;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -226,6 +248,7 @@ export interface Database {
           start_time?: string;
           end_time?: string | null;
           created_by?: string;
+          deleted_at?: string | null;
         };
         Relationships: [
           {
@@ -245,6 +268,9 @@ export interface Database {
           event_date: string;
           registration_deadline: string | null;
           event_link: string | null;
+          participant_count: number;
+          image_url: string | null;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -254,6 +280,9 @@ export interface Database {
           event_date: string;
           registration_deadline?: string | null;
           event_link?: string | null;
+          participant_count?: number;
+          image_url?: string | null;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -263,6 +292,42 @@ export interface Database {
           event_date?: string;
           registration_deadline?: string | null;
           event_link?: string | null;
+          participant_count?: number;
+          image_url?: string | null;
+          deleted_at?: string | null;
+        };
+        Relationships: [];
+      };
+      pending_members: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string;
+          status: PendingMemberStatus;
+          created_at: string;
+          remarks: string | null;
+          approved_at: string | null;
+          approved_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          full_name: string;
+          status?: PendingMemberStatus;
+          created_at?: string;
+          remarks?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string;
+          status?: PendingMemberStatus;
+          created_at?: string;
+          remarks?: string | null;
+          approved_at?: string | null;
+          approved_by?: string | null;
         };
         Relationships: [];
       };
@@ -369,6 +434,7 @@ export type Achievement = Database["public"]["Tables"]["achievements"]["Row"];
 export type TrainingSchedule =
   Database["public"]["Tables"]["training_schedule"]["Row"];
 export type Event = Database["public"]["Tables"]["events"]["Row"];
+export type PendingMember = Database["public"]["Tables"]["pending_members"]["Row"];
 export type LeaderboardEntry = Database["public"]["Tables"]["leaderboard"]["Row"];
 
 export type PostWithAuthor = Post & {
