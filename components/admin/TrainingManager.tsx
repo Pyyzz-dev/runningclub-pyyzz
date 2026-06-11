@@ -135,11 +135,10 @@ export function TrainingManager({
 
     if ("error" in result && result.error) {
       toast.error(result.error);
-      return;
+    } else {
+      toast.success("Tạo lịch thành công");
+      router.refresh();
     }
-
-    toast.success(result.success ? 'Tạo lịch thành công' : (result.error || 'Có lỗi xảy ra'));
-    router.refresh();
   };
 
   const handleGenerateYearly = async () => {
@@ -149,11 +148,10 @@ export function TrainingManager({
 
     if ("error" in result && result.error) {
       toast.error(result.error);
-      return;
+    } else {
+      toast.success("Tạo lịch thành công");
+      router.refresh();
     }
-
-    toast.success(result.success ? 'Tạo lịch thành công' : (result.error || 'Có lỗi xảy ra'));
-    router.refresh();
   };
 
   return (
