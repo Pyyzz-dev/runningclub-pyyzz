@@ -19,11 +19,18 @@ const buffer = Buffer.from(await response.arrayBuffer());
 writeFileSync(logoPath, buffer);
 
 const sharp = (await import("sharp")).default;
-const png32 = await sharp(buffer).resize(32, 32, { fit: "contain", background: "#ffffff" }).png().toBuffer();
-const png16 = await sharp(buffer).resize(16, 16, { fit: "contain", background: "#ffffff" }).png().toBuffer();
+const sizes = [16, 32, 64];
+const pngBuffers = await Promise.all(
+  sizes.map((size) =>
+    sharp(buffer)
+      .resize(size, size, { fit: "contain", background: "#ffffff" })
+      .png()
+      .toBuffer()
+  )
+);
 
 const toIco = (await import("to-ico")).default;
-const ico = await toIco([png16, png32]);
+const ico = await toIco(pngBuffers);
 writeFileSync(faviconPath, ico);
 
-console.log(`Wrote ${faviconPath} (${ico.length} bytes)`);
+console.log(`Wrote ${faviconPath} (${ico.length} bytes, ${sizes.join("/")}px)`);

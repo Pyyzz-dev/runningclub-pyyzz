@@ -19,8 +19,8 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       <div className="container-custom py-3 md:py-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex shrink-0 items-center gap-2">
+        <div className="flex min-w-0 items-center justify-between gap-2 sm:gap-4">
+          <div className="flex min-w-0 shrink items-center gap-1 sm:gap-2">
             <HeaderMobileSheet segment={segment} />
 
             <Link href="/" className="flex shrink-0 items-center gap-2">
@@ -60,7 +60,9 @@ export function Header() {
             })}
           </nav>
 
-          <HeaderAuthActions />
+          <div className="shrink-0">
+            <HeaderAuthActions />
+          </div>
         </div>
       </div>
     </header>

@@ -50,14 +50,23 @@ export function HeaderAuthActions() {
   };
 
   if (user) {
+    const displayName = user.full_name?.trim() || "Thành viên";
+
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            <span className="hidden max-w-[150px] truncate sm:inline">{user.full_name}</span>
-          </Button>
-        </DropdownMenuTrigger>
+      <div className="flex shrink-0 items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex items-center gap-1 px-2 sm:gap-2 sm:px-3"
+            >
+              <User className="h-4 w-4 shrink-0" />
+              <span className="max-w-[100px] truncate text-sm sm:max-w-[150px]">
+                {displayName}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
             <div className="flex flex-col">
@@ -92,16 +101,21 @@ export function HeaderAuthActions() {
             Đăng xuất
           </DropdownMenuItem>
         </DropdownMenuContent>
-      </DropdownMenu>
+        </DropdownMenu>
+      </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+    <div className="flex shrink-0 items-center gap-2">
+      <Button asChild variant="ghost" size="sm" className="px-2 text-sm sm:px-3">
         <Link href="/login">Đăng nhập</Link>
       </Button>
-      <Button asChild size="sm" className="bg-blue-600 text-white hover:bg-blue-700">
+      <Button
+        asChild
+        size="sm"
+        className="bg-blue-600 px-2 text-sm text-white hover:bg-blue-700 sm:px-3"
+      >
         <Link href="/register">Đăng ký</Link>
       </Button>
     </div>
