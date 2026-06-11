@@ -1,5 +1,4 @@
-export const CLUB_LOGO_URL =
-  "https://tlmzqwnvgcxhekljtrvg.supabase.co/storage/v1/object/public/Running%20Club%20-%20CMC%20Global/Image/logo_runningclub.jpg";
+export { CLUB_LOGO_URL } from "@/lib/site-config";
 
 export const navLinks = [
   { label: "Giới thiệu", href: "/about" },

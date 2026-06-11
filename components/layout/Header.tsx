@@ -1,6 +1,7 @@
 "use client";
 
-import { CLUB_LOGO_URL, navLinks } from "@/components/layout/header-config";
+import { navLinks } from "@/components/layout/header-config";
+import { CLUB_LOGO_URL, CLUB_NAME } from "@/lib/site-config";
 import { HeaderAuthActions, HeaderMobileSheet } from "@/components/layout/HeaderControls";
 import { isNavSegmentActive } from "@/lib/pathname";
 import { cn } from "@/lib/utils";
@@ -25,15 +26,15 @@ export function Header() {
             <Link href="/" className="flex shrink-0 items-center gap-2">
               <Image
                 src={CLUB_LOGO_URL}
-                alt="CMC Global Running Club Logo"
-                width={160}
-                height={160}
-                className="object-contain"
+                alt={`Logo ${CLUB_NAME}`}
+                width={48}
+                height={48}
+                className="h-10 w-10 shrink-0 object-contain sm:h-12 sm:w-12"
                 priority
               />
               <div className="hidden flex-col leading-tight sm:flex">
                 <span className="font-display text-sm font-bold text-primary sm:text-base">
-                  CLB Chạy bộ CMC Global
+                  {CLUB_NAME}
                 </span>
               </div>
             </Link>

@@ -138,7 +138,7 @@ export function TrainingManager({
       return;
     }
 
-    toast.success(result.message);
+    toast.success(result.success ? 'Tạo lịch thành công' : (result.error || 'Có lỗi xảy ra'));
     router.refresh();
   };
 
@@ -152,7 +152,7 @@ export function TrainingManager({
       return;
     }
 
-    toast.success(result.message);
+    toast.success(result.success ? 'Tạo lịch thành công' : (result.error || 'Có lỗi xảy ra'));
     router.refresh();
   };
 

@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { fetchCurrentUser } from "@/app/actions/dataActions";
+import { CLUB_DESCRIPTION, CLUB_LOGO_URL, CLUB_NAME } from "@/lib/site-config";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -19,11 +20,19 @@ const beVietnamPro = Be_Vietnam_Pro({
 
 export const metadata: Metadata = {
   title: {
-    default: "Câu lạc bộ Chạy bộ CMC Global",
-    template: "%s | Câu lạc bộ Chạy bộ CMC Global",
+    default: CLUB_NAME,
+    template: `%s | ${CLUB_NAME}`,
   },
-  description:
-    "Câu lạc bộ chạy bộ CMC Global — cộng đồng runners năng động, lịch tập, sự kiện và bảng xếp hạng.",
+  description: CLUB_DESCRIPTION,
+  icons: {
+    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    apple: [{ url: CLUB_LOGO_URL, type: "image/jpeg" }],
+  },
+  openGraph: {
+    title: CLUB_NAME,
+    description: CLUB_DESCRIPTION,
+    images: [{ url: CLUB_LOGO_URL, alt: CLUB_NAME }],
+  },
 };
 
 export default async function RootLayout({
