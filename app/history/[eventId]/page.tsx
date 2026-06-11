@@ -7,7 +7,7 @@ import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { Container } from "@/components/common/Container";
 import { Button } from "@/components/ui/button";
 import { fetchHistoryEventById } from "@/app/actions/dataActions";
-import { formatLongDate } from "@/lib/format";
+import { formatPublishedAt } from "@/lib/format";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
 
 export const revalidate = 3600;
@@ -49,7 +49,7 @@ export default async function HistoryEventPage({ params }: HistoryEventPageProps
       </Button>
 
       <article className="mx-auto max-w-3xl animate-fade-in">
-        <time className="text-sm text-muted-foreground">{formatLongDate(event.event_date)}</time>
+        <time className="text-sm text-muted-foreground">{formatPublishedAt(event.event_date)}</time>
 
         <h1 className="mt-2 font-display text-3xl font-bold text-foreground md:text-4xl">
           {event.title}

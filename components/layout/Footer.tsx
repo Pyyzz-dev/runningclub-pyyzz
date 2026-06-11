@@ -41,8 +41,13 @@ export async function Footer() {
                 Hà Nội, Việt Nam
               </p>
               <p className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0" />
-                contact@cmcglobal.vn
+                <Mail className="h-4 w-4 shrink-0 text-gray-400" />
+                <a
+                  href="mailto:cmcglobalrunningclub@gmail.com"
+                  className="hover:text-blue-600"
+                >
+                  cmcglobalrunningclub@gmail.com
+                </a>
               </p>
             </div>
           </div>

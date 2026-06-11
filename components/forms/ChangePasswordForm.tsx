@@ -2,7 +2,7 @@
 
 import { updatePassword } from "@/app/actions/authActions";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -69,9 +69,8 @@ export function ChangePasswordForm({ className, onSuccess }: ChangePasswordFormP
     >
       <div className="space-y-2">
         <Label htmlFor="oldPassword">Mật khẩu hiện tại</Label>
-        <Input
+        <PasswordInput
           id="oldPassword"
-          type="password"
           autoComplete="current-password"
           {...register("oldPassword")}
         />
@@ -82,9 +81,8 @@ export function ChangePasswordForm({ className, onSuccess }: ChangePasswordFormP
 
       <div className="space-y-2">
         <Label htmlFor="newPassword">Mật khẩu mới</Label>
-        <Input
+        <PasswordInput
           id="newPassword"
-          type="password"
           autoComplete="new-password"
           {...register("newPassword")}
         />
@@ -95,9 +93,8 @@ export function ChangePasswordForm({ className, onSuccess }: ChangePasswordFormP
 
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
-        <Input
+        <PasswordInput
           id="confirmPassword"
-          type="password"
           autoComplete="new-password"
           {...register("confirmPassword")}
         />

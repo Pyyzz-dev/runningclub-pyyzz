@@ -1,11 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TrainingCard } from "@/components/cards/TrainingCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
+import {
+  getTrainingStatus,
+  type TrainingStatus,
+} from "@/lib/utils/trainingStatus";
 import { CalendarDays } from "lucide-react";
 
 interface TrainingCalendarProps {
@@ -39,9 +51,19 @@ export function TrainingCalendar({
   isAdmin = false,
   className,
 }: TrainingCalendarProps) {
+  const router = useRouter();
   const [weekDate, setWeekDate] = useState(() =>
     toDateInputValue(new Date())
   );
+  const [statusFilter, setStatusFilter] = useState<"all" | TrainingStatus>("all");
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      router.refresh();
+    }, 60_000);
+
+    return () => clearInterval(interval);
+  }, [router]);
 
   const filteredTrainings = useMemo(() => {
     const { start, end } = getWeekBounds(weekDate);
@@ -49,13 +71,17 @@ export function TrainingCalendar({
     return trainings
       .filter((training) => {
         const startTime = new Date(training.start_time);
-        return startTime >= start && startTime <= end;
+        const inWeek = startTime >= start && startTime <= end;
+        const matchesStatus =
+          statusFilter === "all" ||
+          getTrainingStatus(training.start_time, training.end_time) === statusFilter;
+        return inWeek && matchesStatus;
       })
       .sort(
         (a, b) =>
           new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
       );
-  }, [trainings, weekDate]);
+  }, [trainings, weekDate, statusFilter]);
 
   const { start, end } = getWeekBounds(weekDate);
 
@@ -78,6 +104,25 @@ export function TrainingCalendar({
         <p className="text-sm text-muted-foreground">
           {start.toLocaleDateString("vi-VN")} – {end.toLocaleDateString("vi-VN")}
         </p>
+        <div className="space-y-2 sm:ml-auto">
+          <Label htmlFor="status-filter" className="sr-only">
+            Lọc theo trạng thái
+          </Label>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as "all" | TrainingStatus)}
+          >
+            <SelectTrigger id="status-filter" className="w-full sm:w-[160px]">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
+              <SelectItem value="ongoing">Đang diễn ra</SelectItem>
+              <SelectItem value="completed">Đã diễn ra</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {filteredTrainings.length === 0 ? (

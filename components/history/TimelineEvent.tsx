@@ -1,4 +1,4 @@
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import type { ClubHistory } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -32,7 +32,7 @@ export function TimelineEvent({ event, index }: TimelineEventProps) {
       >
         <div className="rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
           <time className="text-sm font-medium text-muted-foreground" dateTime={event.event_date}>
-            {formatDate(event.event_date, "dd/MM/yyyy")}
+            {formatDateTime(event.event_date)}
           </time>
           <Link
             href={`/history/${event.id}`}

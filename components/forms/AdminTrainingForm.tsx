@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { fromDatetimeLocal } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -49,8 +50,8 @@ export function AdminTrainingForm({ className, onSuccess }: AdminTrainingFormPro
     formData.set("title", values.title);
     if (values.description) formData.set("description", values.description);
     if (values.location) formData.set("location", values.location);
-    formData.set("start_time", values.start_time);
-    if (values.end_time) formData.set("end_time", values.end_time);
+    formData.set("start_time", fromDatetimeLocal(values.start_time));
+    if (values.end_time) formData.set("end_time", fromDatetimeLocal(values.end_time));
 
     const result = await addTraining(formData);
 

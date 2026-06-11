@@ -6,17 +6,39 @@ export function formatRelativeTime(date: string | Date | null): string {
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
 }
 
-function parseStableDate(date: string | Date): Date {
+export function parseStableDate(date: string | Date): Date {
   if (date instanceof Date) return date;
 
   const trimmed = date.trim();
-  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmed);
   if (dateOnly) {
     const [, year, month, day] = dateOnly;
     return new Date(Number(year), Number(month) - 1, Number(day));
   }
 
   return new Date(trimmed);
+}
+
+/** `datetime-local` input value from ISO / DB string (local timezone). */
+export function toDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = parseStableDate(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** ISO string for DB storage from `datetime-local` or parseable datetime. */
+export function fromDatetimeLocal(value: string): string {
+  if (!value) return "";
+  return new Date(value).toISOString();
+}
+
+export function toIsoDateTime(value: string): string {
+  if (!value) return value;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) && value.endsWith("Z")) {
+    return value;
+  }
+  return new Date(value).toISOString();
 }
 
 /** Extract year without timezone drift (for grouping / timelines). */
@@ -43,7 +65,17 @@ export function compareEventDates(a: string, b: string): number {
 
 export function formatDateTime(date: string | Date | null): string {
   if (!date) return "";
-  return format(parseStableDate(date), "dd/MM/yyyy HH:mm", { locale: vi });
+  return format(parseStableDate(date), "dd/MM/yyyy HH:mm:ss", { locale: vi });
+}
+
+export function formatTime(date: string | Date | null): string {
+  if (!date) return "";
+  return format(parseStableDate(date), "HH:mm:ss", { locale: vi });
+}
+
+export function formatPublishedAt(date: string | Date | null): string {
+  if (!date) return "";
+  return format(parseStableDate(date), "d MMMM yyyy, HH:mm", { locale: vi });
 }
 
 export function truncateText(text: string, maxLength = 150): string {

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { TrainingSchedule } from "@/lib/supabase/types";
+import { toIsoDateTime } from "@/lib/format";
 import { restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
@@ -11,12 +12,15 @@ type ActionResult<T = undefined> =
   | { data?: undefined; error: string };
 
 function parseTrainingForm(formData: FormData) {
+  const startTime = String(formData.get("start_time") ?? "");
+  const endTime = String(formData.get("end_time") ?? "");
+
   return {
     title: String(formData.get("title") ?? "").trim(),
     description: (formData.get("description") as string) || null,
     location: String(formData.get("location") ?? "").trim(),
-    start_time: String(formData.get("start_time") ?? ""),
-    end_time: String(formData.get("end_time") ?? ""),
+    start_time: toIsoDateTime(startTime),
+    end_time: toIsoDateTime(endTime),
   };
 }
 

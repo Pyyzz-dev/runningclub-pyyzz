@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { Event } from "@/lib/supabase/types";
+import { toIsoDateTime } from "@/lib/format";
 import { restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
@@ -41,7 +42,7 @@ const eventSchema = z.object({
 });
 
 function parseEventForm(formData: FormData) {
-  return eventSchema.parse({
+  const parsed = eventSchema.parse({
     name: formData.get("name"),
     location: formData.get("location"),
     event_date: formData.get("event_date"),
@@ -51,12 +52,23 @@ function parseEventForm(formData: FormData) {
     event_link: formData.get("event_link") || null,
     image_url: formData.get("image_url") || null,
   });
+
+  return {
+    ...parsed,
+    event_date: toIsoDateTime(parsed.event_date),
+    registration_deadline: parsed.registration_deadline
+      ? toIsoDateTime(parsed.registration_deadline)
+      : null,
+  };
 }
 
-function revalidateEventPaths() {
+function revalidateEventPaths(eventId?: string) {
   revalidatePath("/events");
   revalidatePath("/admin/events");
   revalidatePath("/");
+  if (eventId) {
+    revalidatePath(`/events/${eventId}`);
+  }
 }
 
 export async function getEvents(): Promise<Event[]> {
@@ -181,6 +193,6 @@ export async function updateParticipantCount(
 
   if (error) return { error: error.message };
 
-  revalidateEventPaths();
+  revalidateEventPaths(id);
   return { data };
 }

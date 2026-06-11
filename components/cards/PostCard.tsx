@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatRelativeTime, isWithinDays, truncateText } from "@/lib/format";
+import { formatDateTime, isWithinDays, truncateText } from "@/lib/format";
 import type { PostWithAuthorAndCount } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { MessageCircle } from "lucide-react";
@@ -71,7 +71,7 @@ export function PostCard({ post, className, priority = false }: PostCardProps) {
         </CardContent>
 
         <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>{formatRelativeTime(post.published_at ?? post.updated_at)}</span>
+          <span>{formatDateTime(post.published_at ?? post.updated_at)}</span>
           <span className="flex items-center gap-1">
             <MessageCircle className="h-4 w-4" />
             {post.comment_count} bình luận

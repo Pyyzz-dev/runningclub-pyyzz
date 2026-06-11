@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { ClubHistory, ClubInfo } from "@/lib/supabase/types";
+import { toIsoDateTime } from "@/lib/format";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
 import { restore, softDelete } from "@/lib/utils/softDelete";
 
@@ -13,10 +14,12 @@ type ActionResult<T = undefined> =
 
 function parseHistoryForm(formData: FormData) {
   const rawContent = String(formData.get("content") ?? "").trim();
+  const eventDate = String(formData.get("event_date") ?? "");
+
   return {
     title: String(formData.get("title") ?? "").trim(),
     content: cleanHtmlContent(rawContent),
-    event_date: String(formData.get("event_date") ?? ""),
+    event_date: toIsoDateTime(eventDate),
     image_url: (formData.get("image_url") as string) || null,
     order_index: Number(formData.get("order_index") ?? 0),
   };

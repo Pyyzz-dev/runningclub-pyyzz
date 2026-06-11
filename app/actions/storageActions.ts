@@ -10,7 +10,7 @@ import {
 } from "@/lib/supabase/storage-config";
 import { createClient } from "@/lib/supabase/server";
 
-const MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function uploadImage(formData: FormData) {
@@ -33,7 +33,7 @@ export async function uploadImage(formData: FormData) {
   }
 
   if (file.size > MAX_SIZE_BYTES) {
-    return { success: false as const, error: "Ảnh không được vượt quá 5MB" };
+    return { success: false as const, error: "Ảnh không được vượt quá 10MB" };
   }
 
   const folderRaw = String(formData.get("folder") ?? "introduce");

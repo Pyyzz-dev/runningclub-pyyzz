@@ -60,7 +60,14 @@ export function LeaderboardTableWithRefresh({
         <p className="text-sm text-muted-foreground">
           Dữ liệu được đồng bộ từ Google Sheets
           {lastUpdated && (
-            <> · Cập nhật lúc {lastUpdated.toLocaleString("vi-VN")}</>
+            <> · Cập nhật lúc {lastUpdated.toLocaleString("vi-VN", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })}</>
           )}
         </p>
         <Button

@@ -3,7 +3,6 @@ import type { Database } from "@/lib/supabase/types";
 
 export type SoftDeleteTable =
   | "posts"
-  | "comments"
   | "club_history"
   | "training_schedule"
   | "events";

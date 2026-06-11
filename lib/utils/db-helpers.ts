@@ -48,7 +48,7 @@ function mapCommentWithAuthor(comment: CommentRowWithUser): CommentWithAuthor {
     content: comment.content,
     is_anonymous: comment.is_anonymous,
     created_at: comment.created_at,
-    deleted_at: comment.deleted_at ?? null,
+    is_hidden: comment.is_hidden ?? false,
     author: {
       id: author.id,
       full_name: author.full_name,
@@ -115,15 +115,47 @@ export async function updateOwnPassword(
 
 // ─── Posts & Comments ─────────────────────────────────────────────────────────
 
-export async function getAllPosts(): Promise<DbResult<PostWithAuthorAndCount[]>> {
+/** Đếm comment theo post, cùng logic với getPostById (lọc is_hidden khi không phải admin). */
+export async function getCommentCountsByPostIds(
+  postIds: string[],
+  viewerIsAdmin: boolean
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  for (const id of postIds) {
+    counts.set(id, 0);
+  }
+  if (postIds.length === 0) {
+    return counts;
+  }
+
+  const supabase = await createClient();
+  let query = supabase.from("comments").select("post_id").in("post_id", postIds);
+
+  if (!viewerIsAdmin) {
+    query = query.eq("is_hidden", false);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    return counts;
+  }
+
+  for (const row of data ?? []) {
+    counts.set(row.post_id, (counts.get(row.post_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export async function getAllPosts(
+  viewerIsAdmin = false
+): Promise<DbResult<PostWithAuthorAndCount[]>> {
   const supabase = await createClient();
 
   const { data, error } = await isNotDeleted(
     supabase.from("posts").select(
       `
       *,
-      author:users!posts_author_id_fkey(id, full_name, avatar_url),
-      comments(count)
+      author:users!posts_author_id_fkey(id, full_name, avatar_url)
     `
     )
   )
@@ -134,22 +166,27 @@ export async function getAllPosts(): Promise<DbResult<PostWithAuthorAndCount[]>>
     return { data: null, error: error.message };
   }
 
-  const mapped = (data ?? []).map((post) => {
-    const { comments, ...rest } = post as PostWithAuthor & {
-      comments: { count: number }[];
-    };
-    return {
-      ...rest,
-      comment_count: comments?.[0]?.count ?? 0,
-    } as PostWithAuthorAndCount;
-  });
+  const posts = (data ?? []) as PostWithAuthor[];
+  const counts = await getCommentCountsByPostIds(
+    posts.map((post) => post.id),
+    viewerIsAdmin
+  );
+
+  const mapped = posts.map(
+    (post) =>
+      ({
+        ...post,
+        comment_count: counts.get(post.id) ?? 0,
+      }) as PostWithAuthorAndCount
+  );
 
   return { data: mapped, error: null };
 }
 
 /** Trang chủ: chỉ lấy cột cần thiết, giới hạn số lượng */
 export async function getHomepagePosts(
-  limit = 3
+  limit = 3,
+  viewerIsAdmin = false
 ): Promise<DbResult<PostWithAuthorAndCount[]>> {
   const supabase = await createClient();
 
@@ -164,8 +201,7 @@ export async function getHomepagePosts(
       updated_at,
       author_id,
       status,
-      author:users!posts_author_id_fkey(id, full_name, avatar_url),
-      comments(count)
+      author:users!posts_author_id_fkey(id, full_name, avatar_url)
     `
     )
   )
@@ -177,15 +213,19 @@ export async function getHomepagePosts(
     return { data: null, error: error.message };
   }
 
-  const mapped = (data ?? []).map((post) => {
-    const { comments, ...rest } = post as PostWithAuthor & {
-      comments: { count: number }[];
-    };
-    return {
-      ...rest,
-      comment_count: comments?.[0]?.count ?? 0,
-    } as PostWithAuthorAndCount;
-  });
+  const posts = (data ?? []) as PostWithAuthor[];
+  const counts = await getCommentCountsByPostIds(
+    posts.map((post) => post.id),
+    viewerIsAdmin
+  );
+
+  const mapped = posts.map(
+    (post) =>
+      ({
+        ...post,
+        comment_count: counts.get(post.id) ?? 0,
+      }) as PostWithAuthorAndCount
+  );
 
   return { data: mapped, error: null };
 }
@@ -208,8 +248,17 @@ export async function getAllPostsAdmin(): Promise<DbResult<PostWithAuthor[]>> {
   return { data: data as PostWithAuthor[] | null, error: error?.message ?? null };
 }
 
+export function filterCommentsForViewer(
+  comments: CommentWithAuthor[],
+  viewerIsAdmin: boolean
+): CommentWithAuthor[] {
+  if (viewerIsAdmin) return comments;
+  return comments.filter((comment) => !comment.is_hidden);
+}
+
 export async function getPostById(
-  id: string
+  id: string,
+  viewerIsAdmin = false
 ): Promise<DbResult<PostWithComments>> {
   const supabase = await createClient();
 
@@ -228,23 +277,30 @@ export async function getPostById(
     return { data: null, error: postError.message };
   }
 
-  const { data: comments, error: commentsError } = await isNotDeleted(
-    supabase.from("comments").select(
+  let commentsQuery = supabase
+    .from("comments")
+    .select(
       `
       *,
       users(id, full_name, avatar_url)
     `
     )
-  )
     .eq("post_id", id)
     .order("created_at", { ascending: true });
+
+  if (!viewerIsAdmin) {
+    commentsQuery = commentsQuery.eq("is_hidden", false);
+  }
+
+  const { data: comments, error: commentsError } = await commentsQuery;
 
   if (commentsError) {
     return { data: null, error: commentsError.message };
   }
 
-  const mappedComments = (comments ?? []).map((c) =>
-    mapCommentWithAuthor(c as CommentRowWithUser)
+  const mappedComments = filterCommentsForViewer(
+    (comments ?? []).map((c) => mapCommentWithAuthor(c as CommentRowWithUser)),
+    viewerIsAdmin
   );
 
   return {
@@ -369,27 +425,6 @@ export async function addComment(
     data: mapCommentWithAuthor(data as CommentRowWithUser),
     error: null,
   };
-}
-
-export async function deleteComment(
-  commentId: string,
-  userId: string
-): Promise<DbResult<boolean>> {
-  const supabase = await createClient();
-  const admin = await isAdmin();
-
-  let query = supabase
-    .from("comments")
-    .update({ deleted_at: new Date().toISOString() })
-    .eq("id", commentId);
-
-  if (!admin) {
-    query = query.eq("user_id", userId);
-  }
-
-  const { error } = await query;
-
-  return { data: error ? null : true, error: error?.message ?? null };
 }
 
 // ─── Club History & Achievements ──────────────────────────────────────────────
@@ -605,6 +640,16 @@ export async function getAllEvents(): Promise<DbResult<Event[]>> {
     "event_date",
     { ascending: false }
   );
+
+  return { data, error: error?.message ?? null };
+}
+
+export async function getEventById(id: string): Promise<DbResult<Event>> {
+  const supabase = await createClient();
+
+  const { data, error } = await isNotDeleted(supabase.from("events").select("*"))
+    .eq("id", id)
+    .maybeSingle();
 
   return { data, error: error?.message ?? null };
 }

@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import type { PendingMember } from "@/lib/supabase/types";
 import { CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -102,7 +102,7 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
                 <TableCell className="font-medium">{member.full_name}</TableCell>
                 <TableCell>{member.email}</TableCell>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
-                  {formatDate(member.created_at, "dd/MM/yyyy")}
+                  {formatDateTime(member.created_at)}
                 </TableCell>
                 <TableCell className="text-center">
                   <Button

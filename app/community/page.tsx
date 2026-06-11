@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { CommunitySection } from "@/components/modules/CommunitySection";
-import { fetchAllPosts } from "@/app/actions/dataActions";
+import { fetchAllPosts, fetchCurrentUser } from "@/app/actions/dataActions";
 
 export const revalidate = 3600;
 
@@ -11,7 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CommunityPage() {
-  const { data: posts, error } = await fetchAllPosts();
+  const { data: user } = await fetchCurrentUser();
+  const isAdmin = user?.role === "admin";
+  const { data: posts, error } = await fetchAllPosts(isAdmin);
 
   return (
     <Section title="Cộng đồng" subtitle="Chia sẻ, kết nối và truyền cảm hứng cùng nhau">

@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { TrainingCalendar } from "@/components/modules/TrainingCalendar";
-import { fetchCurrentUser, fetchUpcomingTraining } from "@/app/actions/dataActions";
+import { fetchAllTrainings, fetchCurrentUser } from "@/app/actions/dataActions";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Lịch tập",
@@ -12,12 +12,12 @@ export const metadata: Metadata = {
 
 export default async function TrainingPage() {
   const [{ data: trainings, error }, { data: user }] = await Promise.all([
-    fetchUpcomingTraining(50),
+    fetchAllTrainings(),
     fetchCurrentUser(),
   ]);
 
   return (
-    <Section title="Lịch tập" subtitle="Các buổi tập sắp tới của CLB">
+    <Section title="Lịch tập" subtitle="Lịch tập của câu lạc bộ">
       <Breadcrumb
         items={[{ label: "Trang chủ", href: "/" }, { label: "Lịch tập" }]}
         className="mb-8"

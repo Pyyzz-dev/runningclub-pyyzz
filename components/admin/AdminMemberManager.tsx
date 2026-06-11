@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -33,7 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { User, UserRole } from "@/lib/supabase/types";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { KeyRound, Loader2, Plus, UserPlus } from "lucide-react";
 import { toast } from "sonner";
@@ -144,10 +145,9 @@ export function AdminMemberManager({ members, className }: AdminMemberManagerPro
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Mật khẩu</Label>
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   required
                   minLength={6}
                   placeholder="Tối thiểu 6 ký tự"
@@ -220,7 +220,7 @@ export function AdminMemberManager({ members, className }: AdminMemberManagerPro
                     </Select>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(member.created_at)}
+                    {formatDateTime(member.created_at)}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
@@ -255,9 +255,8 @@ export function AdminMemberManager({ members, className }: AdminMemberManagerPro
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="newPassword">Mật khẩu mới</Label>
-              <Input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required

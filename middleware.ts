@@ -14,6 +14,8 @@ const PUBLIC_ROUTES = [
   "/leaderboard",
   "/login",
   "/register",
+  "/forgot-password",
+  "/reset-password",
 ];
 
 const PUBLIC_PREFIXES = ["/community"];

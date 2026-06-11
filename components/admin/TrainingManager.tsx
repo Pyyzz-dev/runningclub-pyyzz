@@ -1,6 +1,10 @@
 "use client";
 
 import {
+  generateWeeklyTrainings,
+  generateYearlyTrainings,
+} from "@/app/actions/autoTrainingActions";
+import {
   createTraining,
   deleteTraining,
   restoreTraining,
@@ -21,6 +25,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -31,9 +42,15 @@ import {
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import {
+  getTrainingStatus,
+  getTrainingStatusColor,
+  getTrainingStatusText,
+  type TrainingStatus,
+} from "@/lib/utils/trainingStatus";
+import { Calendar, CalendarPlus, Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface TrainingManagerProps {
@@ -48,12 +65,20 @@ export function TrainingManager({
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [monthFilter, setMonthFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | TrainingStatus>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editTraining, setEditTraining] = useState<TrainingSchedule | null>(
     null
   );
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [, setStatusTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setStatusTick((t) => t + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const filtered = useMemo(() => {
     return initialTrainings.filter((t) => {
@@ -66,9 +91,13 @@ export function TrainingManager({
         !monthFilter ||
         t.start_time.startsWith(monthFilter);
 
-      return matchesSearch && matchesMonth;
+      const matchesStatus =
+        statusFilter === "all" ||
+        getTrainingStatus(t.start_time, t.end_time) === statusFilter;
+
+      return matchesSearch && matchesMonth && matchesStatus;
     });
-  }, [initialTrainings, search, monthFilter]);
+  }, [initialTrainings, search, monthFilter, statusFilter]);
 
   const handleSubmit = async (formData: FormData) => {
     if (editTraining) {
@@ -99,6 +128,34 @@ export function TrainingManager({
     router.refresh();
   };
 
+  const handleGenerateWeekly = async () => {
+    setAutoGenerating(true);
+    const result = await generateWeeklyTrainings(4);
+    setAutoGenerating(false);
+
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success(result.message);
+    router.refresh();
+  };
+
+  const handleGenerateYearly = async () => {
+    setAutoGenerating(true);
+    const result = await generateYearlyTrainings();
+    setAutoGenerating(false);
+
+    if ("error" in result && result.error) {
+      toast.error(result.error);
+      return;
+    }
+
+    toast.success(result.message);
+    router.refresh();
+  };
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -119,16 +176,57 @@ export function TrainingManager({
             className="max-w-[180px]"
             aria-label="Lọc theo tháng"
           />
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as "all" | TrainingStatus)}
+          >
+            <SelectTrigger className="w-[160px]" aria-label="Lọc theo trạng thái">
+              <SelectValue placeholder="Trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả</SelectItem>
+              <SelectItem value="upcoming">Sắp diễn ra</SelectItem>
+              <SelectItem value="ongoing">Đang diễn ra</SelectItem>
+              <SelectItem value="completed">Đã diễn ra</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Button
-          onClick={() => {
-            setEditTraining(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Thêm buổi tập
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={handleGenerateWeekly}
+            disabled={autoGenerating}
+            className="gap-2"
+          >
+            {autoGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Calendar className="h-4 w-4" />
+            )}
+            Tạo 4 tuần (Thứ 4)
+          </Button>
+          <Button
+            onClick={handleGenerateYearly}
+            disabled={autoGenerating}
+            className="gap-2 bg-green-600 hover:bg-green-700"
+          >
+            {autoGenerating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CalendarPlus className="h-4 w-4" />
+            )}
+            Tạo cả năm
+          </Button>
+          <Button
+            onClick={() => {
+              setEditTraining(null);
+              setFormOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Thêm buổi tập
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border dark:border-slate-800">
@@ -139,6 +237,7 @@ export function TrainingManager({
               <TableHead>Địa điểm</TableHead>
               <TableHead>Bắt đầu</TableHead>
               <TableHead>Kết thúc</TableHead>
+              <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
           </TableHeader>
@@ -146,14 +245,17 @@ export function TrainingManager({
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Không có buổi tập nào.
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((training) => (
+              filtered.map((training) => {
+                const status = getTrainingStatus(training.start_time, training.end_time);
+
+                return (
                 <TableRow
                   key={training.id}
                   className={training.deleted_at ? "bg-muted/40 opacity-70" : undefined}
@@ -170,6 +272,16 @@ export function TrainingManager({
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDateTime(training.end_time)}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full px-2 py-1 text-xs font-medium",
+                        getTrainingStatusColor(status)
+                      )}
+                    >
+                      {getTrainingStatusText(status)}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
@@ -204,7 +316,8 @@ export function TrainingManager({
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+              );
+              })
             )}
           </TableBody>
         </Table>

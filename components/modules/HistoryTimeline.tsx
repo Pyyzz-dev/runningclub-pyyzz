@@ -1,7 +1,7 @@
 "use client";
 
 import { YearTimeline } from "@/components/history/YearTimeline";
-import { formatDate, getYearFromDateString } from "@/lib/format";
+import { formatDateTime, getYearFromDateString } from "@/lib/format";
 import type { ClubHistory } from "@/lib/supabase/types";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
 import { cn } from "@/lib/utils";
@@ -121,7 +121,7 @@ export function HistoryTimeline({ items, className }: HistoryTimelineProps) {
                           )}
                         >
                           <time className="text-sm font-medium text-primary">
-                            {formatDate(item.event_date, "dd/MM/yyyy")}
+                            {formatDateTime(item.event_date)}
                           </time>
                           <h3 className="mt-1 font-display text-lg font-semibold">
                             {item.title}

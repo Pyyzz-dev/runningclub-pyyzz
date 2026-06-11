@@ -5,7 +5,9 @@ import {
   getAllMembers,
   getAllPosts,
   getAllPostsAdmin,
+  getAllTrainings,
   getCurrentUser,
+  getEventById,
   getHistoryEventById,
   getHistoryTimeline,
   getHomepagePosts,
@@ -20,16 +22,16 @@ export async function fetchCurrentUser() {
   return getCurrentUser();
 }
 
-export async function fetchAllPosts() {
-  return getAllPosts();
+export async function fetchAllPosts(viewerIsAdmin = false) {
+  return getAllPosts(viewerIsAdmin);
 }
 
 export async function fetchAllPostsAdmin() {
   return getAllPostsAdmin();
 }
 
-export async function fetchPostById(id: string) {
-  return getPostById(id);
+export async function fetchPostById(id: string, viewerIsAdmin = false) {
+  return getPostById(id, viewerIsAdmin);
 }
 
 export async function fetchHistoryTimeline() {
@@ -48,14 +50,25 @@ export async function fetchUpcomingTraining(limit = 10) {
   return getUpcomingTraining(limit);
 }
 
+export async function fetchAllTrainings() {
+  return getAllTrainings();
+}
+
 export async function fetchUpcomingEvents(limit = 10) {
   return getUpcomingEvents(limit);
 }
 
+export async function fetchEventById(id: string) {
+  return getEventById(id);
+}
+
 /** Trang chủ: posts + events + trainings song song, query tối giản */
 export async function fetchHomepageData() {
+  const { data: user } = await getCurrentUser();
+  const viewerIsAdmin = user?.role === "admin";
+
   const [posts, events, trainings] = await Promise.all([
-    getHomepagePosts(3),
+    getHomepagePosts(3, viewerIsAdmin),
     getUpcomingEvents(3),
     getUpcomingTraining(3),
   ]);

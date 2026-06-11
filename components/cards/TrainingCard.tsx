@@ -3,6 +3,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  getTrainingStatus,
+  getTrainingStatusColor,
+  getTrainingStatusText,
+} from "@/lib/utils/trainingStatus";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -28,7 +33,7 @@ export function TrainingCard({
   className,
   onDownloadICS,
 }: TrainingCardProps) {
-  const isUpcoming = new Date(training.start_time) > new Date();
+  const status = getTrainingStatus(training.start_time, training.end_time);
 
   const handleDownload = () => {
     const icsContent = generateICS({
@@ -51,11 +56,14 @@ export function TrainingCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg">{training.title}</CardTitle>
-          {isUpcoming ? (
-            <Badge variant="default">Sắp tới</Badge>
-          ) : (
-            <Badge variant="secondary">Đã qua</Badge>
-          )}
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2 py-1 text-xs font-medium",
+              getTrainingStatusColor(status)
+            )}
+          >
+            {getTrainingStatusText(status)}
+          </span>
         </div>
         {training.description && (
           <CardDescription className="line-clamp-3">

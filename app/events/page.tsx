@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
+import { AuthGuard } from "@/components/auth/AuthGuard";
 import { EventList } from "@/components/modules/EventList";
 import { fetchUpcomingEvents } from "@/app/actions/dataActions";
 
@@ -19,11 +20,13 @@ export default async function EventsPage() {
         items={[{ label: "Trang chủ", href: "/" }, { label: "Sự kiện" }]}
         className="mb-8"
       />
-      {error ? (
-        <p className="text-center text-destructive">{error}</p>
-      ) : (
-        <EventList events={events ?? []} />
-      )}
+      <AuthGuard message="Hãy đăng ký tài khoản và trở thành thành viên CLB để theo dõi lịch sự kiện của CLB">
+        {error ? (
+          <p className="text-center text-destructive">{error}</p>
+        ) : (
+          <EventList events={events ?? []} />
+        )}
+      </AuthGuard>
     </Section>
   );
 }

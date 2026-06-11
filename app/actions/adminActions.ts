@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { LeaderboardPeriodType } from "@/lib/supabase/types";
+import { toIsoDateTime } from "@/lib/format";
 import {
   createEvent as createEventHelper,
   createMemberAccount as createMemberAccountHelper,
@@ -130,7 +131,11 @@ export async function addTraining(formData: FormData) {
     return { data: null, error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
   }
 
-  const result = await createTrainingScheduleHelper(parsed.data);
+  const result = await createTrainingScheduleHelper({
+    ...parsed.data,
+    start_time: toIsoDateTime(parsed.data.start_time),
+    end_time: parsed.data.end_time ? toIsoDateTime(parsed.data.end_time) : null,
+  });
 
   if (result.data) {
     revalidatePath("/training");
@@ -154,7 +159,13 @@ export async function addEvent(formData: FormData) {
     return { data: null, error: parsed.error.issues[0]?.message ?? "Dữ liệu không hợp lệ" };
   }
 
-  const result = await createEventHelper(parsed.data);
+  const result = await createEventHelper({
+    ...parsed.data,
+    event_date: toIsoDateTime(parsed.data.event_date),
+    registration_deadline: parsed.data.registration_deadline
+      ? toIsoDateTime(parsed.data.registration_deadline)
+      : null,
+  });
 
   if (result.data) {
     revalidatePath("/events");

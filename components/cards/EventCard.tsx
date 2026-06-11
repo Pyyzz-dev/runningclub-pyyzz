@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDate } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import type { Event } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { Calendar, ExternalLink, MapPin, Users } from "lucide-react";
@@ -62,7 +62,7 @@ export function EventCard({ event, className }: EventCardProps) {
       <CardContent className="flex-1 space-y-3 pt-0">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4 shrink-0" />
-          <span>{formatDate(event.event_date, "dd/MM/yyyy")}</span>
+          <span>{formatDateTime(event.event_date)}</span>
         </div>
 
         {event.location && (
@@ -79,22 +79,25 @@ export function EventCard({ event, className }: EventCardProps) {
 
         {event.registration_deadline && (
           <p className="text-xs text-muted-foreground">
-            Hạn đăng ký: {formatDate(event.registration_deadline, "dd/MM/yyyy")}
+            Hạn đăng ký: {formatDateTime(event.registration_deadline)}
             {!registrationOpen && " (đã hết hạn)"}
           </p>
         )}
       </CardContent>
 
-      {event.event_link && registrationOpen && isUpcoming && (
-        <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
+        <Button asChild variant="outline" className="w-full">
+          <Link href={`/events/${event.id}`}>Xem chi tiết</Link>
+        </Button>
+        {event.event_link && registrationOpen && isUpcoming && (
           <Button asChild className="w-full">
             <Link href={event.event_link} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
               Đăng ký
             </Link>
           </Button>
-        </CardFooter>
-      )}
+        )}
+      </CardFooter>
     </Card>
   );
 }

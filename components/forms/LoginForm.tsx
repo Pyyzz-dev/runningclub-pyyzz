@@ -3,6 +3,7 @@
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -66,10 +67,10 @@ export function LoginForm({
     }
 
     await refreshUser();
-    toast.success("Đăng nhập thành công");
+    toast.success("Đăng nhập thành công!");
     onSuccess?.();
+    router.push(redirectTo || "/");
     router.refresh();
-    router.push(redirectTo);
   };
 
   return (
@@ -98,20 +99,22 @@ export function LoginForm({
 
       <div className="space-y-2">
         <Label htmlFor="password">Mật khẩu</Label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            autoComplete="current-password"
-            className="pl-9"
-            {...register("password")}
-          />
-        </div>
+        <PasswordInput
+          id="password"
+          placeholder="••••••••"
+          autoComplete="current-password"
+          leftIcon={<Lock className="h-4 w-4" />}
+          disabled={isSubmitting}
+          {...register("password")}
+        />
         {errors.password && (
           <p className="text-sm text-destructive">{errors.password.message}</p>
         )}
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-sm text-blue-600 hover:underline">
+            Quên mật khẩu?
+          </Link>
+        </div>
       </div>
 
       <Button type="submit" className="w-full" disabled={isSubmitting}>

@@ -103,7 +103,7 @@ export interface Database {
           content: string;
           is_anonymous: boolean;
           created_at: string;
-          deleted_at: string | null;
+          is_hidden: boolean;
         };
         Insert: {
           id?: string;
@@ -112,7 +112,7 @@ export interface Database {
           content: string;
           is_anonymous?: boolean;
           created_at?: string;
-          deleted_at?: string | null;
+          is_hidden?: boolean;
         };
         Update: {
           id?: string;
@@ -121,7 +121,7 @@ export interface Database {
           content?: string;
           is_anonymous?: boolean;
           created_at?: string;
-          deleted_at?: string | null;
+          is_hidden?: boolean;
         };
         Relationships: [
           {
@@ -370,6 +370,39 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      password_resets: {
+        Row: {
+          id: string;
+          email: string;
+          token: string;
+          expires_at: string;
+          used: boolean;
+          created_by_ip: string | null;
+          user_agent: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          token: string;
+          expires_at: string;
+          used?: boolean;
+          created_by_ip?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          token?: string;
+          expires_at?: string;
+          used?: boolean;
+          created_by_ip?: string | null;
+          user_agent?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       member_password_reset_requests: {
         Row: {

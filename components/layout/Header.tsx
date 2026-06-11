@@ -1,8 +1,7 @@
 "use client";
 
 import { CLUB_LOGO_URL, navLinks } from "@/components/layout/header-config";
-import { HeaderActions, HeaderMobileMenu } from "@/components/layout/HeaderControls";
-import { HeaderMobileProvider } from "@/components/layout/HeaderMobileContext";
+import { HeaderAuthActions, HeaderMobileSheet } from "@/components/layout/HeaderControls";
 import { isNavSegmentActive } from "@/lib/pathname";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -17,11 +16,13 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-white shadow-sm backdrop-blur supports-[backdrop-filter]:bg-white/95">
-      <HeaderMobileProvider segment={segment}>
-        <div className="container-custom py-4">
-          <div className="flex h-16 items-center justify-between gap-4">
-            <Link href="/" className="flex shrink-0 items-center gap-3">
+    <header className="sticky top-0 z-50 bg-white shadow-sm">
+      <div className="container-custom py-3 md:py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex shrink-0 items-center gap-2">
+            <HeaderMobileSheet segment={segment} />
+
+            <Link href="/" className="flex shrink-0 items-center gap-2">
               <Image
                 src={CLUB_LOGO_URL}
                 alt="CMC Global Running Club Logo"
@@ -30,36 +31,37 @@ export function Header() {
                 className="object-contain"
                 priority
               />
-              <span className="font-display hidden text-lg font-bold text-primary sm:inline sm:text-xl">
-                Câu lạc bộ Chạy bộ CMC Global
-              </span>
+              <div className="hidden flex-col leading-tight sm:flex">
+                <span className="font-display text-sm font-bold text-primary sm:text-base">
+                  CLB Chạy bộ CMC Global
+                </span>
+              </div>
             </Link>
-
-            <nav className="hidden items-center gap-1 lg:flex">
-              {navLinks.map((link) => {
-                const active = isNavSegmentActive(segment, link.href);
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-                      active
-                        ? "bg-accent font-semibold text-accent-foreground"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <HeaderActions />
           </div>
-          <HeaderMobileMenu />
+
+          <nav className="hidden items-center gap-4 md:flex lg:gap-6">
+            {navLinks.map((link) => {
+              const active = isNavSegmentActive(segment, link.href);
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    "whitespace-nowrap py-2 text-sm font-bold transition-colors lg:text-base",
+                    active
+                      ? "border-b-2 border-blue-600 font-bold text-blue-600"
+                      : "text-gray-600 hover:text-blue-600"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <HeaderAuthActions />
         </div>
-      </HeaderMobileProvider>
+      </div>
     </header>
   );
 }

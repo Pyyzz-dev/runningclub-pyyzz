@@ -4,12 +4,12 @@ import { notFound } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { Container } from "@/components/common/Container";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
-import { CommentForm } from "@/components/forms/CommentForm";
+import { CommentSection } from "@/components/community/CommentSection";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { fetchPostById } from "@/app/actions/dataActions";
-import { formatDate, formatRelativeTime } from "@/lib/format";
+import { fetchCurrentUser, fetchPostById } from "@/app/actions/dataActions";
+import { formatPublishedAt } from "@/lib/format";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
 
 export const revalidate = 3600;
@@ -20,13 +20,15 @@ type PostDetailPageProps = {
 
 export async function generateMetadata({ params }: PostDetailPageProps): Promise<Metadata> {
   const { postId } = await params;
-  const { data: post } = await fetchPostById(postId);
+  const { data: post } = await fetchPostById(postId, false);
   return { title: post?.title ?? "Bài viết" };
 }
 
 export default async function PostDetailPage({ params }: PostDetailPageProps) {
   const { postId } = await params;
-  const { data: post, error } = await fetchPostById(postId);
+  const { data: user } = await fetchCurrentUser();
+  const isAdmin = user?.role === "admin";
+  const { data: post, error } = await fetchPostById(postId, isAdmin);
 
   if (error || !post) {
     notFound();
@@ -42,6 +44,8 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const visibleCommentCount = post.comments.length;
 
   return (
     <Container className="section-padding">
@@ -80,12 +84,12 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
             </div>
             <span>•</span>
             <time dateTime={post.published_at ?? post.updated_at}>
-              {formatRelativeTime(post.published_at ?? post.updated_at)}
+              {formatPublishedAt(post.published_at ?? post.updated_at)}
             </time>
             <span>•</span>
             <Badge variant="outline" className="gap-1">
               <MessageCircle className="h-3 w-3" />
-              {post.comments.length} bình luận
+              {visibleCommentCount} bình luận
             </Badge>
           </div>
         </header>
@@ -99,53 +103,11 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 
         <Separator className="my-10" />
 
-        <section>
-          <h2 className="mb-6 font-display text-xl font-semibold">
-            Bình luận ({post.comments.length})
-          </h2>
-
-          <CommentForm postId={post.id} className="mb-8" />
-
-          <div className="space-y-4">
-            {post.comments.length === 0 ? (
-              <p className="text-center text-muted-foreground">
-                Chưa có bình luận. Hãy là người đầu tiên!
-              </p>
-            ) : (
-              post.comments.map((comment) => {
-                const commentInitials = comment.display_name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)
-                  .toUpperCase();
-
-                return (
-                  <div
-                    key={comment.id}
-                    className="flex gap-3 rounded-lg border bg-card p-4 animate-slide-up"
-                  >
-                    <Avatar className="h-9 w-9 shrink-0">
-                      {!comment.is_anonymous && (
-                        <AvatarImage src={comment.author.avatar_url ?? undefined} />
-                      )}
-                      <AvatarFallback>{commentInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{comment.display_name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDate(comment.created_at, "dd/MM/yyyy HH:mm")}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-sm text-foreground">{comment.content}</p>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </section>
+        <CommentSection
+          postId={post.id}
+          comments={post.comments}
+          isAdmin={isAdmin}
+        />
       </article>
     </Container>
   );

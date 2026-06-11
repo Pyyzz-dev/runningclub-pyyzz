@@ -2,19 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
-import {
-  addComment as addCommentHelper,
-  deleteComment as deleteCommentHelper,
-  getCurrentUser,
-} from "@/lib/utils/db-helpers";
-import { restore } from "@/lib/utils/softDelete";
+import { addComment as addCommentHelper, getCurrentUser } from "@/lib/utils/db-helpers";
+
+type AdminCommentResult =
+  | { success: true; message: string }
+  | { success: false; error: string };
 
 const commentSchema = z.object({
   postId: z.string().uuid("Post ID không hợp lệ"),
   content: z.string().min(1, "Nội dung bình luận không được để trống"),
   isAnonymous: z.boolean().default(false),
 });
+
+function revalidatePostComments(postId: string) {
+  revalidatePath(`/community/${postId}`);
+}
 
 export async function addComment(formData: FormData) {
   const { data: currentUser, error: userError } = await getCurrentUser();
@@ -41,42 +45,80 @@ export async function addComment(formData: FormData) {
   );
 
   if (result.data) {
-    revalidatePath(`/community/${parsed.data.postId}`);
+    revalidatePostComments(parsed.data.postId);
   }
 
   return result;
 }
 
-export async function deleteComment(commentId: string, postId: string) {
-  const { data: currentUser, error: userError } = await getCurrentUser();
-
-  if (!currentUser) {
-    return { data: null, error: userError ?? "Chưa đăng nhập" };
-  }
-
-  const result = await deleteCommentHelper(commentId, currentUser.id);
-
-  if (result.data) {
-    revalidatePath(`/community/${postId}`);
-  }
-
-  return result;
-}
-
-export async function restoreComment(commentId: string, postId: string) {
-  const { data: currentUser, error: userError } = await getCurrentUser();
-
-  if (!currentUser || currentUser.role !== "admin") {
-    return { data: null, error: userError ?? "Không có quyền admin" };
+export async function hideComment(
+  commentId: string,
+  postId: string
+): Promise<AdminCommentResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Không có quyền admin";
+    return { success: false, error: message };
   }
 
   const supabase = await createClient();
-  const { error } = await restore(supabase, "comments", commentId);
+  const { error } = await supabase
+    .from("comments")
+    .update({ is_hidden: true })
+    .eq("id", commentId);
 
   if (error) {
-    return { data: null, error: error.message };
+    return { success: false, error: error.message };
   }
 
-  revalidatePath(`/community/${postId}`);
-  return { data: true, error: null };
+  revalidatePostComments(postId);
+  return { success: true, message: "Đã ẩn bình luận" };
+}
+
+export async function restoreComment(
+  commentId: string,
+  postId: string
+): Promise<AdminCommentResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Không có quyền admin";
+    return { success: false, error: message };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("comments")
+    .update({ is_hidden: false })
+    .eq("id", commentId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePostComments(postId);
+  return { success: true, message: "Đã hiện lại bình luận" };
+}
+
+export async function deleteCommentPermanently(
+  commentId: string,
+  postId: string
+): Promise<AdminCommentResult> {
+  try {
+    await requireAdmin();
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Không có quyền admin";
+    return { success: false, error: message };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePostComments(postId);
+  return { success: true, message: "Đã xóa vĩnh viễn bình luận" };
 }

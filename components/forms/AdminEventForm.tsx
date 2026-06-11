@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { fromDatetimeLocal } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -51,9 +52,9 @@ export function AdminEventForm({ className, onSuccess }: AdminEventFormProps) {
     formData.set("name", values.name);
     if (values.description) formData.set("description", values.description);
     if (values.location) formData.set("location", values.location);
-    formData.set("event_date", values.event_date);
+    formData.set("event_date", fromDatetimeLocal(values.event_date));
     if (values.registration_deadline) {
-      formData.set("registration_deadline", values.registration_deadline);
+      formData.set("registration_deadline", fromDatetimeLocal(values.registration_deadline));
     }
     if (values.event_link) formData.set("event_link", values.event_link);
 

@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format";
 import type { Event } from "@/lib/supabase/types";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -21,11 +22,6 @@ interface EventFormDialogProps {
   onOpenChange: (open: boolean) => void;
   event?: Event | null;
   onSubmit: (formData: FormData) => Promise<{ error?: string } | void>;
-}
-
-function toDateInput(iso: string | null | undefined): string {
-  if (!iso) return "";
-  return iso.slice(0, 10);
 }
 
 export function EventFormDialog({
@@ -49,8 +45,8 @@ export function EventFormDialog({
     if (open) {
       setName(event?.name ?? "");
       setLocation(event?.location ?? "");
-      setEventDate(toDateInput(event?.event_date));
-      setRegistrationDeadline(toDateInput(event?.registration_deadline));
+      setEventDate(toDatetimeLocal(event?.event_date));
+      setRegistrationDeadline(toDatetimeLocal(event?.registration_deadline));
       setDescription(event?.description ?? "");
       setParticipantCount(String(event?.participant_count ?? 0));
       setEventLink(event?.event_link ?? "");
@@ -79,8 +75,11 @@ export function EventFormDialog({
     const formData = new FormData();
     formData.set("name", name.trim());
     formData.set("location", location.trim());
-    formData.set("event_date", eventDate);
-    formData.set("registration_deadline", registrationDeadline);
+    formData.set("event_date", fromDatetimeLocal(eventDate));
+    formData.set(
+      "registration_deadline",
+      registrationDeadline ? fromDatetimeLocal(registrationDeadline) : ""
+    );
     formData.set("description", description.trim());
     formData.set("participant_count", participantCount || "0");
     formData.set("event_link", eventLink.trim());
@@ -134,10 +133,10 @@ export function EventFormDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="event-date">Ngày diễn ra</Label>
+              <Label htmlFor="event-date">Thời gian diễn ra</Label>
               <Input
                 id="event-date"
-                type="date"
+                type="datetime-local"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
                 required
@@ -147,7 +146,7 @@ export function EventFormDialog({
               <Label htmlFor="event-deadline">Hạn chót đăng ký</Label>
               <Input
                 id="event-deadline"
-                type="date"
+                type="datetime-local"
                 value={registrationDeadline}
                 onChange={(e) => setRegistrationDeadline(e.target.value)}
               />
