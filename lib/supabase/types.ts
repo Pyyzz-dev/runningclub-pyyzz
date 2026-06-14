@@ -171,21 +171,18 @@ export interface Database {
       club_info: {
         Row: {
           id: string;
-          title: string;
           content: string;
           cover_image_url: string | null;
           updated_at: string;
         };
         Insert: {
           id?: string;
-          title?: string;
           content: string;
           cover_image_url?: string | null;
           updated_at?: string;
         };
         Update: {
           id?: string;
-          title?: string;
           content?: string;
           cover_image_url?: string | null;
           updated_at?: string;
@@ -227,6 +224,7 @@ export interface Database {
           location: string | null;
           start_time: string;
           end_time: string | null;
+          participant_count: number;
           created_by: string;
           deleted_at: string | null;
         };
@@ -237,6 +235,7 @@ export interface Database {
           location?: string | null;
           start_time: string;
           end_time?: string | null;
+          participant_count?: number;
           created_by: string;
           deleted_at?: string | null;
         };
@@ -247,6 +246,7 @@ export interface Database {
           location?: string | null;
           start_time?: string;
           end_time?: string | null;
+          participant_count?: number;
           created_by?: string;
           deleted_at?: string | null;
         };
@@ -254,6 +254,40 @@ export interface Database {
           {
             foreignKeyName: "training_schedule_created_by_fkey";
             columns: ["created_by"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_participants: {
+        Row: {
+          id: string;
+          training_id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          training_id: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          training_id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_participants_training_id_fkey";
+            columns: ["training_id"];
+            referencedRelation: "training_schedule";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_participants_user_id_fkey";
+            columns: ["user_id"];
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
@@ -452,7 +486,12 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      cleanup_soft_deleted_records: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

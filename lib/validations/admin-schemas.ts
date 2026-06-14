@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 export const clubInfoSchema = z.object({
-  title: z.string().min(1, "Tiêu đề không được để trống"),
   content: z.string().min(1, "Nội dung không được để trống"),
-  image_url: z.string().url().optional().nullable(),
+  cover_image_url: z.string().url().optional().nullable(),
 });
 
 export const historySchema = z.object({

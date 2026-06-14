@@ -23,6 +23,8 @@ import { CalendarDays } from "lucide-react";
 interface TrainingCalendarProps {
   trainings: TrainingSchedule[];
   isAdmin?: boolean;
+  userId?: string | null;
+  registeredMap?: Record<string, boolean>;
   className?: string;
 }
 
@@ -47,15 +49,27 @@ function toDateInputValue(date: Date): string {
 }
 
 export function TrainingCalendar({
-  trainings,
+  trainings: initialTrainings,
   isAdmin = false,
+  userId = null,
+  registeredMap: initialRegisteredMap = {},
   className,
 }: TrainingCalendarProps) {
   const router = useRouter();
+  const [trainings, setTrainings] = useState(initialTrainings);
+  const [registeredMap, setRegisteredMap] = useState(initialRegisteredMap);
   const [weekDate, setWeekDate] = useState(() =>
     toDateInputValue(new Date())
   );
   const [statusFilter, setStatusFilter] = useState<"all" | TrainingStatus>("all");
+
+  useEffect(() => {
+    setTrainings(initialTrainings);
+  }, [initialTrainings]);
+
+  useEffect(() => {
+    setRegisteredMap(initialRegisteredMap);
+  }, [initialRegisteredMap]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -136,6 +150,19 @@ export function TrainingCalendar({
               key={training.id}
               training={training}
               isAdmin={isAdmin}
+              userId={userId}
+              isRegistered={registeredMap[training.id] ?? false}
+              enableRegistration
+              onRegistrationChange={(trainingId, registered, participantCount) => {
+                setRegisteredMap((prev) => ({ ...prev, [trainingId]: registered }));
+                setTrainings((prev) =>
+                  prev.map((item) =>
+                    item.id === trainingId
+                      ? { ...item, participant_count: participantCount }
+                      : item
+                  )
+                );
+              }}
             />
           ))}
         </div>

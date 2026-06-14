@@ -235,6 +235,7 @@ export function TrainingManager({
               <TableHead>Địa điểm</TableHead>
               <TableHead>Bắt đầu</TableHead>
               <TableHead>Kết thúc</TableHead>
+              <TableHead>Đăng ký</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Thao tác</TableHead>
             </TableRow>
@@ -243,7 +244,7 @@ export function TrainingManager({
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="py-8 text-center text-muted-foreground"
                 >
                   Không có buổi tập nào.
@@ -270,6 +271,9 @@ export function TrainingManager({
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDateTime(training.end_time)}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {training.participant_count ?? 0}
                   </TableCell>
                   <TableCell>
                     <span

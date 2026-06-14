@@ -12,6 +12,44 @@ type ActionResult<T = undefined> =
   | { data: T; error?: undefined }
   | { data?: undefined; error: string };
 
+const DEFAULT_CLUB_CONTENT =
+  "<p>Chào mừng đến với CLB Chạy bộ CMC Global</p>";
+
+async function getOrCreateClubInfoId(): Promise<string | null> {
+  const supabase = await createClient();
+
+  const { data: clubInfo, error: fetchError } = await supabase
+    .from("club_info")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("Error fetching club_info id:", fetchError);
+    return null;
+  }
+
+  if (clubInfo?.id) {
+    return clubInfo.id;
+  }
+
+  const { data: newClubInfo, error: insertError } = await supabase
+    .from("club_info")
+    .insert({
+      content: DEFAULT_CLUB_CONTENT,
+      cover_image_url: null,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    console.error("Error creating club_info:", insertError);
+    return null;
+  }
+
+  return newClubInfo.id;
+}
+
 function parseHistoryForm(formData: FormData) {
   const rawContent = String(formData.get("content") ?? "").trim();
   const eventDate = String(formData.get("event_date") ?? "");
@@ -33,13 +71,16 @@ export async function getClubInfo(): Promise<ClubInfo | null> {
     .limit(1)
     .maybeSingle();
 
-  if (error) return null;
+  if (error) {
+    console.error("Error fetching club info:", error);
+    return null;
+  }
+
   return data;
 }
 
 export async function updateClubInfo(
-  content: string,
-  coverImageUrl?: string
+  formData: FormData
 ): Promise<ActionResult<ClubInfo>> {
   try {
     await requireAdmin();
@@ -47,20 +88,34 @@ export async function updateClubInfo(
     return { error: "Unauthorized" };
   }
 
+  const clubInfoId = await getOrCreateClubInfoId();
+  if (!clubInfoId) {
+    return { error: "Không thể tạo hoặc tìm thấy bản ghi giới thiệu" };
+  }
+
+  const rawContent = String(formData.get("content") ?? "");
+  const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
+
+  if (!rawContent.trim() || rawContent === "<p></p>") {
+    return { error: "Nội dung không được để trống" };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("club_info")
-    .upsert({
-      id: "about",
-      title: "Giới thiệu CLB",
-      content: cleanHtmlContent(content),
-      cover_image_url: coverImageUrl ?? null,
+    .update({
+      content: cleanHtmlContent(rawContent),
+      cover_image_url: coverImageUrl,
       updated_at: new Date().toISOString(),
     })
+    .eq("id", clubInfoId)
     .select()
     .single();
 
-  if (error) return { error: error.message };
+  if (error) {
+    console.error("Update club_info error:", error);
+    return { error: error.message };
+  }
 
   revalidatePath("/about");
   revalidatePath("/admin/club-info");

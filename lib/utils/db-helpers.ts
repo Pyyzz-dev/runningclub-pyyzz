@@ -521,7 +521,7 @@ export async function getClubInfo(): Promise<DbResult<ClubInfo>> {
   const { data, error } = await supabase
     .from("club_info")
     .select("*")
-    .eq("id", "about")
+    .limit(1)
     .maybeSingle();
 
   if (error) {
@@ -529,36 +529,49 @@ export async function getClubInfo(): Promise<DbResult<ClubInfo>> {
   }
 
   if (!data) {
-    return {
-      data: {
-        id: "about",
-        title: "Giới thiệu CLB",
-        content: "",
-        cover_image_url: null,
-        updated_at: new Date().toISOString(),
-      },
-      error: null,
-    };
+    return { data: null, error: null };
   }
 
   return { data, error: null };
 }
 
 export async function updateClubInfo(
-  data: Omit<ClubInfoUpdate, "id"> & { title: string; content: string }
+  data: Omit<ClubInfoUpdate, "id"> & { content: string }
 ): Promise<DbResult<ClubInfo>> {
   if (!(await isAdmin())) {
     return { data: null, error: "Không có quyền thực hiện thao tác này" };
   }
 
   const supabase = await createClient();
+  const { data: existing, error: fetchError } = await supabase
+    .from("club_info")
+    .select("id")
+    .limit(1)
+    .maybeSingle();
+
+  if (fetchError) {
+    return { data: null, error: fetchError.message };
+  }
+
+  const payload = {
+    ...data,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (existing?.id) {
+    const { data: info, error } = await supabase
+      .from("club_info")
+      .update(payload)
+      .eq("id", existing.id)
+      .select()
+      .single();
+
+    return { data: info, error: error?.message ?? null };
+  }
+
   const { data: info, error } = await supabase
     .from("club_info")
-    .upsert({
-      id: "about",
-      ...data,
-      updated_at: new Date().toISOString(),
-    })
+    .insert(payload)
     .select()
     .single();
 

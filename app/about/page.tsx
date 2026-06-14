@@ -16,7 +16,7 @@ export default async function AboutPage() {
 
   return (
     <Section
-      title={clubInfo?.title ?? "Giới thiệu CLB"}
+      title="Giới thiệu CLB"
       subtitle="Câu lạc bộ Chạy bộ CMC Global"
       containerClassName="max-w-4xl"
     >
@@ -29,7 +29,7 @@ export default async function AboutPage() {
         <div className="relative mb-8 aspect-[21/9] overflow-hidden rounded-xl">
           <Image
             src={clubInfo.cover_image_url}
-            alt={clubInfo.title}
+            alt="Giới thiệu CLB"
             fill
             sizes="(max-width: 896px) 100vw, 896px"
             className="object-cover"

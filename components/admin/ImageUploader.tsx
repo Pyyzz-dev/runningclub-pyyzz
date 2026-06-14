@@ -3,6 +3,7 @@
 import { uploadImage } from "@/app/actions/storageActions";
 import { Button } from "@/components/ui/button";
 import type { StorageUploadFolder } from "@/lib/supabase/storage-config";
+import { compressImage } from "@/lib/utils/compressImage";
 import { cn } from "@/lib/utils";
 import { Loader2, Upload, X } from "lucide-react";
 import Image from "next/image";
@@ -46,8 +47,19 @@ export function ImageUploader({
     }
 
     setUploading(true);
+
+    let fileToUpload = file;
+    try {
+      fileToUpload = await compressImage(file);
+      console.log(
+        `Ảnh đã nén: ${(fileToUpload.size / 1024).toFixed(2)} KB (từ ${(file.size / 1024).toFixed(2)} KB)`
+      );
+    } catch (compressError) {
+      console.warn("Nén ảnh thất bại, upload ảnh gốc:", compressError);
+    }
+
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", fileToUpload);
     formData.append("folder", folder);
 
     const result = await uploadImage(formData);

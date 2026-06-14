@@ -35,7 +35,14 @@ export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
     }
 
     setSaving(true);
-    const result = await updateClubInfo(content, coverUrl || undefined);
+
+    const formData = new FormData();
+    formData.append("content", content);
+    if (coverUrl) {
+      formData.append("coverImageUrl", coverUrl);
+    }
+
+    const result = await updateClubInfo(formData);
     setSaving(false);
 
     if (result.error) {
