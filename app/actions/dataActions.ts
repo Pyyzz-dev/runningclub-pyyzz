@@ -13,6 +13,7 @@ import {
   getHomepagePosts,
   getLeaderboard,
   getPostById,
+  getTrainingById,
   getUpcomingEvents,
   getUpcomingTraining,
 } from "@/lib/utils/db-helpers";
@@ -32,6 +33,10 @@ export async function fetchAllPostsAdmin() {
 
 export async function fetchPostById(id: string, viewerIsAdmin = false) {
   return getPostById(id, viewerIsAdmin);
+}
+
+export async function fetchTrainingById(id: string) {
+  return getTrainingById(id);
 }
 
 export async function fetchHistoryTimeline() {

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS public.training_participants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   training_id uuid NOT NULL REFERENCES public.training_schedule(id) ON DELETE CASCADE,
   user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  created_at timestamptz NOT NULL DEFAULT now(),
+  registered_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (training_id, user_id)
 );
 

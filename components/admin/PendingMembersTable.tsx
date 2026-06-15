@@ -44,7 +44,7 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
   const handleApprove = (member: PendingMember) => {
     setSelectedMember(member);
     setFullName(member.full_name);
-    setRemarks("");
+    setRemarks(member.remarks ?? "");
     setOpen(true);
   };
 
@@ -91,6 +91,7 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
               <TableHead className="w-12">STT</TableHead>
               <TableHead>Họ tên</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>LDAP / Remarks</TableHead>
               <TableHead>Ngày đăng ký</TableHead>
               <TableHead className="text-center">Thao tác</TableHead>
             </TableRow>
@@ -101,6 +102,9 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
                 <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{member.full_name}</TableCell>
                 <TableCell>{member.email}</TableCell>
+                <TableCell className="max-w-[150px] truncate" title={member.remarks ?? undefined}>
+                  {member.remarks || "-"}
+                </TableCell>
                 <TableCell className="whitespace-nowrap text-muted-foreground">
                   {formatDateTime(member.created_at)}
                 </TableCell>
@@ -146,14 +150,19 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="approve-remarks">Remarks (ghi chú nội bộ)</Label>
+              <Label htmlFor="approve-remarks">Remarks (LDAP / ghi chú nội bộ)</Label>
               <Textarea
                 id="approve-remarks"
                 value={remarks}
                 onChange={(e) => setRemarks(e.target.value)}
-                placeholder="Ghi chú của admin (không hiển thị cho member)..."
-                rows={3}
+                placeholder="Nhập mã LDAP hoặc ghi chú..."
+                rows={2}
               />
+              {selectedMember?.remarks && (
+                <p className="text-xs text-muted-foreground">
+                  LDAP đăng ký: {selectedMember.remarks}
+                </p>
+              )}
             </div>
           </div>
 

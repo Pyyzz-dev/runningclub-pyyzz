@@ -64,6 +64,7 @@ async function sendRegistrationEmail(to: string, fullName: string) {
 export async function registerMember(formData: FormData): Promise<RegisterResult> {
   const fullName = String(formData.get("fullName") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const ldap = String(formData.get("ldap") ?? "").trim() || null;
 
   if (!fullName || !email) {
     return { error: "Vui lòng nhập đầy đủ họ tên và email" };
@@ -99,6 +100,7 @@ export async function registerMember(formData: FormData): Promise<RegisterResult
       .from("pending_members")
       .update({
         full_name: fullName,
+        remarks: ldap,
         status: "pending",
         created_at: new Date().toISOString(),
       })
@@ -111,6 +113,7 @@ export async function registerMember(formData: FormData): Promise<RegisterResult
     const { error: insertError } = await adminClient.from("pending_members").insert({
       email,
       full_name: fullName,
+      remarks: ldap,
       status: "pending",
     });
 

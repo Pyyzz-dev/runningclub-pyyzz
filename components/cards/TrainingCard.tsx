@@ -19,6 +19,7 @@ import { downloadICS, formatDateTime, generateICS } from "@/lib/format";
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { CalendarPlus, Clock, MapPin, Users } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -132,7 +133,14 @@ export function TrainingCard({
     <Card className={cn("flex flex-col", className)}>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{training.title}</CardTitle>
+          <CardTitle className="text-lg">
+            <Link
+              href={`/training/${training.id}`}
+              className="hover:text-primary hover:underline"
+            >
+              {training.title}
+            </Link>
+          </CardTitle>
           <span
             className={cn(
               "shrink-0 rounded-full px-2 py-1 text-xs font-medium",
@@ -167,11 +175,20 @@ export function TrainingCard({
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Users className="h-4 w-4 shrink-0" />
-          <span>{participantCount} đã đăng ký</span>
+          <Link
+            href={`/training/${training.id}`}
+            className="hover:text-primary hover:underline"
+          >
+            {participantCount} đã đăng ký
+          </Link>
         </div>
       </CardContent>
 
       <CardFooter className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/training/${training.id}`}>Xem chi tiết</Link>
+        </Button>
+
         <Button variant="outline" size="sm" onClick={handleDownload}>
           <CalendarPlus className="h-4 w-4" />
           Thêm vào lịch

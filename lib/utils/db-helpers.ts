@@ -14,7 +14,9 @@ import type {
   PostWithAuthor,
   PostWithAuthorAndCount,
   PostWithComments,
+  TrainingParticipantWithUser,
   TrainingSchedule,
+  TrainingWithParticipants,
   User,
 } from "@/lib/supabase/types";
 
@@ -31,6 +33,12 @@ type EventInsert = Database["public"]["Tables"]["events"]["Insert"];
 type LeaderboardInsert = Database["public"]["Tables"]["leaderboard"]["Insert"];
 
 type CommentRowWithUser = CommentWithAuthor & {
+  users: Pick<User, "id" | "full_name" | "avatar_url"> | null;
+};
+
+type TrainingParticipantRow = {
+  id: string;
+  registered_at: string;
   users: Pick<User, "id" | "full_name" | "avatar_url"> | null;
 };
 
@@ -758,6 +766,72 @@ export async function getAllTrainings(filters?: {
 
   const { data, error } = await query;
   return { data, error: error?.message ?? null };
+}
+
+function mapTrainingParticipant(row: TrainingParticipantRow): TrainingParticipantWithUser {
+  const user = row.users;
+  return {
+    id: row.id,
+    registered_at: row.registered_at,
+    user: {
+      id: user?.id ?? "",
+      full_name: user?.full_name ?? "Thành viên",
+      avatar_url: user?.avatar_url ?? null,
+    },
+  };
+}
+
+export async function getTrainingById(
+  id: string
+): Promise<DbResult<TrainingWithParticipants>> {
+  const supabase = await createClient();
+
+  const { data: training, error: trainingError } = await isNotDeleted(
+    supabase.from("training_schedule").select("*")
+  )
+    .eq("id", id)
+    .maybeSingle();
+
+  if (trainingError) {
+    return { data: null, error: trainingError.message };
+  }
+
+  if (!training) {
+    return { data: null, error: "Không tìm thấy buổi tập" };
+  }
+
+  const { data: participantRows, error: participantsError } = await supabase
+    .from("training_participants")
+    .select(
+      `
+      id,
+      registered_at,
+      users!inner(id, full_name, avatar_url)
+    `
+    )
+    .eq("training_id", id)
+    .order("registered_at", { ascending: true });
+
+  if (participantsError) {
+    console.error("Failed to fetch training participants:", participantsError.message);
+    return {
+      data: {
+        ...(training as TrainingSchedule),
+        participants: [],
+      },
+      error: null,
+    };
+  }
+
+  return {
+    data: {
+      ...(training as TrainingSchedule),
+      participants: (participantRows ?? []).map((row) =>
+        mapTrainingParticipant(row as TrainingParticipantRow)
+      ),
+    },
+    error: null,
+  };
 }
 
 export async function updateTrainingSchedule(

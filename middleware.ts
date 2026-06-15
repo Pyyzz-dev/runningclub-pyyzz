@@ -18,7 +18,7 @@ const PUBLIC_ROUTES = [
   "/reset-password",
 ];
 
-const PUBLIC_PREFIXES = ["/community"];
+const PUBLIC_PREFIXES = ["/community", "/training"];
 
 function isPublicRoute(pathname: string): boolean {
   if (PUBLIC_ROUTES.includes(pathname)) return true;

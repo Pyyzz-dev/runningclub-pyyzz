@@ -264,19 +264,19 @@ export interface Database {
           id: string;
           training_id: string;
           user_id: string;
-          created_at: string;
+          registered_at: string;
         };
         Insert: {
           id?: string;
           training_id: string;
           user_id: string;
-          created_at?: string;
+          registered_at?: string;
         };
         Update: {
           id?: string;
           training_id?: string;
           user_id?: string;
-          created_at?: string;
+          registered_at?: string;
         };
         Relationships: [
           {
@@ -532,6 +532,16 @@ export type PostWithComments = PostWithAuthor & {
 
 export type LeaderboardWithUser = LeaderboardEntry & {
   user: Pick<User, "id" | "full_name" | "avatar_url">;
+};
+
+export type TrainingParticipantWithUser = {
+  id: string;
+  registered_at: string;
+  user: Pick<User, "id" | "full_name" | "avatar_url">;
+};
+
+export type TrainingWithParticipants = TrainingSchedule & {
+  participants: TrainingParticipantWithUser[];
 };
 
 export type DbResult<T> = {

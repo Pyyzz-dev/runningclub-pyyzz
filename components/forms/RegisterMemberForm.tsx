@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CheckCircle, Mail, UserPlus } from "lucide-react";
+import { CheckCircle, Key, Mail, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +15,7 @@ export function RegisterMemberForm() {
   const [loading, setLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
+  const [ldap, setLdap] = useState("");
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +27,9 @@ export function RegisterMemberForm() {
     const formData = new FormData();
     formData.append("fullName", fullName);
     formData.append("email", email);
+    if (ldap.trim()) {
+      formData.append("ldap", ldap.trim());
+    }
 
     const result = await registerMember(formData);
 
@@ -36,6 +40,7 @@ export function RegisterMemberForm() {
       setSuccess(true);
       setFullName("");
       setEmail("");
+      setLdap("");
     }
 
     setLoading(false);
@@ -86,7 +91,7 @@ export function RegisterMemberForm() {
                 <UserPlus className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <Input
                   id="fullName"
-                  placeholder="Ví dụ: Nguyễn Văn A"
+                  placeholder="Xin vui lòng sử dụng Họ và tên đầy đủ"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="pl-9"
@@ -111,6 +116,24 @@ export function RegisterMemberForm() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ldap">LDAP (tùy chọn)</Label>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  id="ldap"
+                  placeholder="Mã LDAP (nếu có)"
+                  value={ldap}
+                  onChange={(e) => setLdap(e.target.value)}
+                  className="pl-9"
+                  disabled={loading}
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Nhập mã LDAP nếu bạn đã được cấp (không bắt buộc)
+              </p>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
