@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
+import { formatDate, toDateInputValue } from "@/lib/format";
 import {
   getTrainingStatus,
   type TrainingStatus,
@@ -42,10 +43,6 @@ function getWeekBounds(dateStr: string): { start: Date; end: Date } {
   end.setHours(23, 59, 59, 999);
 
   return { start, end };
-}
-
-function toDateInputValue(date: Date): string {
-  return date.toISOString().split("T")[0];
 }
 
 export function TrainingCalendar({
@@ -115,8 +112,8 @@ export function TrainingCalendar({
             className="w-full sm:w-auto"
           />
         </div>
-        <p className="text-sm text-muted-foreground">
-          {start.toLocaleDateString("vi-VN")} – {end.toLocaleDateString("vi-VN")}
+        <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+          {formatDate(start)} – {formatDate(end)}
         </p>
         <div className="space-y-2 sm:ml-auto">
           <Label htmlFor="status-filter" className="sr-only">

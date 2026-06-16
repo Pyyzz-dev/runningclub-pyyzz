@@ -83,7 +83,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
               <span>{post.author.full_name}</span>
             </div>
             <span>•</span>
-            <time dateTime={post.published_at ?? post.updated_at}>
+            <time dateTime={post.published_at ?? post.updated_at} suppressHydrationWarning>
               {formatPublishedAt(post.published_at ?? post.updated_at)}
             </time>
             <span>•</span>
@@ -96,6 +96,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 
         <div
           className="prose prose-lg prose-slate max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: cleanHtmlContent(post.content),
           }}

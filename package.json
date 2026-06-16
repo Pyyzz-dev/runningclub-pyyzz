@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npm run clean && next dev",
     "dev:force": "node scripts/clean.mjs --full && next dev",
-    "build": "next build",
+    "build": "node scripts/generate-pwa-icons.mjs && next build",
     "start": "next start",
     "lint": "next lint",
     "clean": "node scripts/clean.mjs",

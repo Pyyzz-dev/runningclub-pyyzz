@@ -5,6 +5,7 @@ import { getLeaderboardFromSheetWithError } from "@/app/actions/leaderboardActio
 import { LeaderboardTable } from "@/components/modules/LeaderboardTable";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Button } from "@/components/ui/button";
+import { formatDateTime } from "@/lib/format";
 import type { LeaderboardEntry } from "@/lib/types/leaderboard";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
@@ -25,9 +26,8 @@ export function LeaderboardTableWithRefresh({
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(
-    initialData.length > 0 ? new Date() : null
-  );
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -50,6 +50,10 @@ export function LeaderboardTableWithRefresh({
   }, [initialData]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     const interval = setInterval(fetchData, REFRESH_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -59,15 +63,11 @@ export function LeaderboardTableWithRefresh({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
           Dữ liệu được đồng bộ từ Google Sheets
-          {lastUpdated && (
-            <> · Cập nhật lúc {lastUpdated.toLocaleString("vi-VN", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-              second: "2-digit",
-            })}</>
+          {mounted && lastUpdated && (
+            <span suppressHydrationWarning>
+              {" "}
+              · Cập nhật lúc {formatDateTime(lastUpdated.toISOString())}
+            </span>
           )}
         </p>
         <Button

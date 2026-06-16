@@ -56,23 +56,6 @@ export function AdminPostForm({ post, className, onSuccess }: AdminPostFormProps
       };
     }
 
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved) as AdminPostFormValues;
-          return {
-            title: parsed.title ?? "",
-            content: parsed.content ?? "",
-            status: parsed.status ?? "draft",
-            cover_image_url: parsed.cover_image_url ?? "",
-          };
-        }
-      } catch {
-        // ignore invalid draft
-      }
-    }
-
     return {
       title: "",
       content: "",
@@ -80,6 +63,22 @@ export function AdminPostForm({ post, className, onSuccess }: AdminPostFormProps
       cover_image_url: "",
     };
   }, [post]);
+
+  const loadDraftFromStorage = useCallback((): AdminPostFormValues | null => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!saved) return null;
+      const parsed = JSON.parse(saved) as AdminPostFormValues;
+      return {
+        title: parsed.title ?? "",
+        content: parsed.content ?? "",
+        status: parsed.status ?? "draft",
+        cover_image_url: parsed.cover_image_url ?? "",
+      };
+    } catch {
+      return null;
+    }
+  }, []);
 
   const {
     register,
@@ -96,6 +95,14 @@ export function AdminPostForm({ post, className, onSuccess }: AdminPostFormProps
   useEffect(() => {
     reset(getDefaultValues());
   }, [post, reset, getDefaultValues]);
+
+  useEffect(() => {
+    if (isEditing || post) return;
+    const draft = loadDraftFromStorage();
+    if (draft) {
+      reset(draft);
+    }
+  }, [isEditing, post, loadDraftFromStorage, reset]);
 
   const watchedValues = watch();
 

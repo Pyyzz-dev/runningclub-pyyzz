@@ -9,7 +9,9 @@ import { isNotDeleted } from "@/lib/utils/softDelete";
 import { getCurrentUser } from "@/lib/utils/db-helpers";
 import { getRegistrationStatus } from "@/app/actions/trainingParticipantActions";
 import { getTrainingStatus } from "@/lib/utils/trainingStatus";
+import { formatLongDate, formatTime } from "@/lib/format";
 import { TrainingDetailRegistrationSection } from "@/components/training/TrainingDetailRegistrationSection";
+import { HydrationSafeDateTime } from "@/components/common/HydrationSafeDateTime";
 
 export const revalidate = 60;
 
@@ -86,27 +88,13 @@ export default async function TrainingDetailPage({ params }: TrainingDetailPageP
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3 text-gray-600">
                 <Calendar className="h-5 w-5" />
-                <span>
-                  {new Date(training.start_time).toLocaleDateString("vi-VN", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
+                <span suppressHydrationWarning>{formatLongDate(training.start_time)}</span>
               </div>
               <div className="flex items-center gap-3 text-gray-600">
                 <Clock className="h-5 w-5" />
-                <span>
-                  {new Date(training.start_time).toLocaleTimeString("vi-VN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                  {training.end_time &&
-                    ` - ${new Date(training.end_time).toLocaleTimeString("vi-VN", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}`}
+                <span suppressHydrationWarning>
+                  {formatTime(training.start_time)}
+                  {training.end_time && ` - ${formatTime(training.end_time)}`}
                 </span>
               </div>
               {training.location && (
@@ -162,7 +150,7 @@ export default async function TrainingDetailPage({ params }: TrainingDetailPageP
                         <p className="font-medium">{participant.users.full_name}</p>
                         <p className="text-xs text-gray-500">
                           Đăng ký lúc:{" "}
-                          {new Date(participant.registered_at).toLocaleString("vi-VN")}
+                          <HydrationSafeDateTime date={participant.registered_at} />
                         </p>
                       </div>
                     </div>

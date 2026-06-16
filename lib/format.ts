@@ -1,6 +1,32 @@
 import { formatDistanceToNow, format } from "date-fns";
 import { vi } from "date-fns/locale";
 
+const VIETNAM_TZ = "Asia/Ho_Chi_Minh";
+
+function formatWithTimeZoneParts(
+  date: string | Date,
+  options: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormatPart[] {
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: VIETNAM_TZ,
+    ...options,
+  }).formatToParts(parseStableDate(date));
+}
+
+function getPart(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string {
+  return parts.find((part) => part.type === type)?.value ?? "";
+}
+
+/** YYYY-MM-DD in Vietnam timezone (for date inputs). */
+export function toDateInputValue(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: VIETNAM_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 export function formatRelativeTime(date: string | Date | null): string {
   if (!date) return "";
   return formatDistanceToNow(new Date(date), { addSuffix: true, locale: vi });
@@ -51,12 +77,26 @@ export function getYearFromDateString(date: string): number {
 
 export function formatDate(date: string | Date | null, pattern = "dd/MM/yyyy"): string {
   if (!date) return "";
+  if (pattern === "dd/MM/yyyy") {
+    const parts = formatWithTimeZoneParts(date, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    return `${getPart(parts, "day")}/${getPart(parts, "month")}/${getPart(parts, "year")}`;
+  }
   return format(parseStableDate(date), pattern, { locale: vi });
 }
 
 export function formatLongDate(date: string | Date | null): string {
   if (!date) return "";
-  return format(parseStableDate(date), "EEEE, dd MMMM yyyy", { locale: vi });
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: VIETNAM_TZ,
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(parseStableDate(date));
 }
 
 export function compareEventDates(a: string, b: string): number {
@@ -65,17 +105,40 @@ export function compareEventDates(a: string, b: string): number {
 
 export function formatDateTime(date: string | Date | null): string {
   if (!date) return "";
-  return format(parseStableDate(date), "dd/MM/yyyy HH:mm:ss", { locale: vi });
+  const parts = formatWithTimeZoneParts(date, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  return `${getPart(parts, "day")}/${getPart(parts, "month")}/${getPart(parts, "year")} ${getPart(parts, "hour")}:${getPart(parts, "minute")}:${getPart(parts, "second")}`;
 }
 
 export function formatTime(date: string | Date | null): string {
   if (!date) return "";
-  return format(parseStableDate(date), "HH:mm:ss", { locale: vi });
+  const parts = formatWithTimeZoneParts(date, {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  return `${getPart(parts, "hour")}:${getPart(parts, "minute")}:${getPart(parts, "second")}`;
 }
 
 export function formatPublishedAt(date: string | Date | null): string {
   if (!date) return "";
-  return format(parseStableDate(date), "d MMMM yyyy, HH:mm", { locale: vi });
+  const parts = formatWithTimeZoneParts(date, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  return `${getPart(parts, "day")} ${getPart(parts, "month")} ${getPart(parts, "year")}, ${getPart(parts, "hour")}:${getPart(parts, "minute")}`;
 }
 
 export function truncateText(text: string, maxLength = 150): string {

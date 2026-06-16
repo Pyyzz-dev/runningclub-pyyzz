@@ -25,7 +25,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatDateTime } from "@/lib/format";
+import { HydrationSafeDateTime } from "@/components/common/HydrationSafeDateTime";
 import type { CommentWithAuthor } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
@@ -72,9 +72,10 @@ function CommentItem({ comment, isAdmin, onToggleHide, onDelete }: CommentItemPr
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{comment.display_name}</span>
-            <span className="text-xs text-gray-400">
-              {formatDateTime(comment.created_at)}
-            </span>
+            <HydrationSafeDateTime
+              date={comment.created_at}
+              className="text-xs text-gray-400"
+            />
             {isHidden && isAdmin && (
               <Badge variant="outline" className="text-xs text-gray-500">
                 Đã ẩn (chỉ admin thấy)

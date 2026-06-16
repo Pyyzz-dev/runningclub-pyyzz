@@ -143,6 +143,7 @@ export function TrainingCard({
               "shrink-0 rounded-full px-2 py-1 text-xs font-medium",
               getTrainingStatusColor(status)
             )}
+            suppressHydrationWarning
           >
             {getTrainingStatusText(status)}
           </span>

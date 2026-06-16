@@ -25,7 +25,6 @@ export const metadata: Metadata = {
   },
   description: CLUB_DESCRIPTION,
   manifest: "/manifest.webmanifest",
-  themeColor: "#0ea5e9",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
     apple: [{ url: CLUB_LOGO_URL, type: "image/jpeg" }],
