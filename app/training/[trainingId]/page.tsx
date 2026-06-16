@@ -6,6 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { isNotDeleted } from "@/lib/utils/softDelete";
+import { getCurrentUser } from "@/lib/utils/db-helpers";
+import { getRegistrationStatus } from "@/app/actions/trainingParticipantActions";
+import { getTrainingStatus } from "@/lib/utils/trainingStatus";
+import { TrainingDetailRegistrationSection } from "@/components/training/TrainingDetailRegistrationSection";
 
 export const revalidate = 60;
 
@@ -27,7 +31,7 @@ export default async function TrainingDetailPage({ params }: TrainingDetailPageP
   const supabase = await createClient();
 
   const { data: training, error } = await isNotDeleted(
-    supabase.from("training_schedule").select("*")
+    supabase.from("training_schedule").select("*, participant_count")
   )
     .eq("id", trainingId)
     .single();
@@ -56,9 +60,12 @@ export default async function TrainingDetailPage({ params }: TrainingDetailPageP
   }
 
   const participants = (participantRows ?? []) as ParticipantRow[];
-  const isCompleted = training.end_time
-    ? new Date(training.end_time) < new Date()
-    : new Date(training.start_time) < new Date();
+  const { data: user } = await getCurrentUser();
+  const { registered: isRegistered } = user
+    ? await getRegistrationStatus(trainingId, user.id)
+    : { registered: false };
+  const status = getTrainingStatus(training.start_time, training.end_time);
+  const isCompleted = status === "completed";
 
   return (
     <div className="container-custom section-padding">
@@ -108,10 +115,13 @@ export default async function TrainingDetailPage({ params }: TrainingDetailPageP
                   <span>{training.location}</span>
                 </div>
               )}
-              <div className="flex items-center gap-3 text-gray-600">
-                <Users className="h-5 w-5" />
-                <span>{participants.length} thành viên đã đăng ký</span>
-              </div>
+              <TrainingDetailRegistrationSection
+                trainingId={trainingId}
+                userId={user?.id ?? null}
+                initialRegistered={isRegistered}
+                isCompleted={isCompleted}
+                initialParticipantCount={training.participant_count ?? 0}
+              />
               {training.description && (
                 <div className="mt-4 rounded-lg bg-gray-50 p-4">
                   <p className="whitespace-pre-wrap text-gray-700">{training.description}</p>
@@ -131,7 +141,7 @@ export default async function TrainingDetailPage({ params }: TrainingDetailPageP
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Danh sách đăng ký ({participants.length})
+                Danh sách đăng ký ({training.participant_count || 0})
               </CardTitle>
             </CardHeader>
             <CardContent>

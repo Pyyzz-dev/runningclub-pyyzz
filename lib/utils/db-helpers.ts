@@ -626,7 +626,7 @@ export async function getUpcomingTraining(
     supabase
       .from("training_schedule")
       .select(
-        "id, title, description, location, start_time, end_time, created_by, deleted_at"
+        "id, title, description, location, start_time, end_time, participant_count, created_by, deleted_at"
       )
   )
     .gte("start_time", now)

@@ -36,6 +36,7 @@ interface TrainingCardProps {
   userId?: string | null;
   isRegistered?: boolean;
   enableRegistration?: boolean;
+  loginRedirect?: string;
   onRegistrationChange?: (
     trainingId: string,
     registered: boolean,
@@ -51,14 +52,12 @@ export function TrainingCard({
   userId = null,
   isRegistered = false,
   enableRegistration = false,
+  loginRedirect = "/training",
   onRegistrationChange,
 }: TrainingCardProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [registered, setRegistered] = useState(isRegistered);
-  const [participantCount, setParticipantCount] = useState(
-    training.participant_count ?? 0
-  );
 
   const status = getTrainingStatus(training.start_time, training.end_time);
   const isCompleted = status === "completed";
@@ -66,10 +65,6 @@ export function TrainingCard({
   useEffect(() => {
     setRegistered(isRegistered);
   }, [isRegistered]);
-
-  useEffect(() => {
-    setParticipantCount(training.participant_count ?? 0);
-  }, [training.participant_count]);
 
   const handleDownload = () => {
     const icsContent = generateICS({
@@ -89,14 +84,13 @@ export function TrainingCard({
 
   const updateRegistration = (nextRegistered: boolean, nextCount: number) => {
     setRegistered(nextRegistered);
-    setParticipantCount(nextCount);
     onRegistrationChange?.(training.id, nextRegistered, nextCount);
   };
 
   const handleRegister = async () => {
     if (!userId) {
       toast.error("Vui lòng đăng nhập để đăng ký");
-      router.push("/login?redirect=/training");
+      router.push(`/login?redirect=${encodeURIComponent(loginRedirect)}`);
       return;
     }
 
@@ -110,7 +104,7 @@ export function TrainingCard({
     }
 
     toast.success(result.message);
-    updateRegistration(true, participantCount + 1);
+    updateRegistration(true, (training.participant_count ?? 0) + 1);
     router.refresh();
   };
 
@@ -125,7 +119,10 @@ export function TrainingCard({
     }
 
     toast.success(result.message);
-    updateRegistration(false, Math.max(0, participantCount - 1));
+    updateRegistration(
+      false,
+      Math.max(0, (training.participant_count ?? 0) - 1)
+    );
     router.refresh();
   };
 
@@ -173,13 +170,13 @@ export function TrainingCard({
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <Users className="h-4 w-4 shrink-0" />
           <Link
             href={`/training/${training.id}`}
             className="hover:text-primary hover:underline"
           >
-            {participantCount} đã đăng ký
+            <span>{training.participant_count ?? 0} đã đăng ký</span>
           </Link>
         </div>
       </CardContent>
@@ -221,7 +218,9 @@ export function TrainingCard({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => router.push("/login?redirect=/training")}
+                onClick={() =>
+                  router.push(`/login?redirect=${encodeURIComponent(loginRedirect)}`)
+                }
               >
                 Đăng nhập để tham gia
               </Button>

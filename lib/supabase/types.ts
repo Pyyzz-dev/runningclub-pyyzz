@@ -491,6 +491,14 @@ export interface Database {
         Args: Record<string, never>;
         Returns: Json;
       };
+      increment_training_count: {
+        Args: { training_id: string };
+        Returns: undefined;
+      };
+      decrement_training_count: {
+        Args: { training_id: string };
+        Returns: undefined;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

@@ -3,7 +3,7 @@ import { Calendar, Trophy, Users } from "lucide-react";
 import { Section } from "@/components/common/Section";
 import { PostCard } from "@/components/cards/PostCard";
 import { EventCard } from "@/components/cards/EventCard";
-import { TrainingCard } from "@/components/cards/TrainingCard";
+import { HomeTrainingList } from "@/components/home/HomeTrainingList";
 import { Button } from "@/components/ui/button";
 import { HeroSection } from "@/components/home/HeroSection";
 import { fetchHomepageData } from "@/app/actions/dataActions";
@@ -11,7 +11,7 @@ import { fetchHomepageData } from "@/app/actions/dataActions";
 export const revalidate = 3600;
 
 export default async function HomePage() {
-  const { posts, events, trainings } = await fetchHomepageData();
+  const { posts, events, trainings, user, registeredMap } = await fetchHomepageData();
 
   return (
     <>
@@ -89,11 +89,12 @@ export default async function HomePage() {
 
       {trainings.length > 0 && (
         <Section title="Lịch tập sắp tới" subtitle="Tham gia buổi tập cùng CLB">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {trainings.map((training) => (
-              <TrainingCard key={training.id} training={training} />
-            ))}
-          </div>
+          <HomeTrainingList
+            trainings={trainings}
+            userId={user?.id ?? null}
+            registeredMap={registeredMap}
+            isAdmin={user?.role === "admin"}
+          />
           <div className="mt-8 text-center">
             <Button asChild variant="outline">
               <Link href="/training">Xem lịch tập đầy đủ</Link>

@@ -18,6 +18,7 @@ import {
   getUpcomingTraining,
 } from "@/lib/utils/db-helpers";
 import type { LeaderboardPeriodType } from "@/lib/supabase/types";
+import { getUserTrainingRegistrations } from "@/app/actions/trainingParticipantActions";
 
 export async function fetchCurrentUser() {
   return getCurrentUser();
@@ -78,10 +79,14 @@ export async function fetchHomepageData() {
     getUpcomingTraining(3),
   ]);
 
+  const registeredMap = user ? await getUserTrainingRegistrations(user.id) : {};
+
   return {
     posts: posts.data ?? [],
     events: events.data ?? [],
     trainings: trainings.data ?? [],
+    user: user ?? null,
+    registeredMap,
     errors: [posts.error, events.error, trainings.error].filter(Boolean) as string[],
   };
 }

@@ -7,37 +7,35 @@ type ActionResult =
   | { success: true; message: string }
   | { error: string };
 
-function revalidateTrainingPages() {
+function revalidateTrainingPages(trainingId?: string) {
   revalidatePath("/training");
   revalidatePath("/admin/training");
   revalidatePath("/");
+  if (trainingId) {
+    revalidatePath(`/training/${trainingId}`);
+  }
 }
 
-async function adjustParticipantCount(
-  trainingId: string,
-  delta: 1 | -1
-): Promise<{ error?: string }> {
+async function incrementParticipantCount(trainingId: string): Promise<{ error?: string }> {
   const supabase = await createClient();
+  const { error } = await supabase.rpc("increment_training_count", {
+    training_id: trainingId,
+  });
 
-  const { data: training, error: fetchError } = await supabase
-    .from("training_schedule")
-    .select("participant_count")
-    .eq("id", trainingId)
-    .single();
-
-  if (fetchError || !training) {
-    return { error: "Không tìm thấy buổi tập" };
+  if (error) {
+    return { error: "Không thể cập nhật số lượng đăng ký" };
   }
 
-  const currentCount = training.participant_count ?? 0;
-  const nextCount = delta === 1 ? currentCount + 1 : Math.max(0, currentCount - 1);
+  return {};
+}
 
-  const { error: updateError } = await supabase
-    .from("training_schedule")
-    .update({ participant_count: nextCount })
-    .eq("id", trainingId);
+async function decrementParticipantCount(trainingId: string): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("decrement_training_count", {
+    training_id: trainingId,
+  });
 
-  if (updateError) {
+  if (error) {
     return { error: "Không thể cập nhật số lượng đăng ký" };
   }
 
@@ -106,7 +104,7 @@ export async function registerForTraining(trainingId: string): Promise<ActionRes
     return { error: "Không thể đăng ký, vui lòng thử lại" };
   }
 
-  const countResult = await adjustParticipantCount(trainingId, 1);
+  const countResult = await incrementParticipantCount(trainingId);
   if (countResult.error) {
     await supabase
       .from("training_participants")
@@ -116,7 +114,7 @@ export async function registerForTraining(trainingId: string): Promise<ActionRes
     return { error: countResult.error };
   }
 
-  revalidateTrainingPages();
+  revalidateTrainingPages(trainingId);
   return { success: true, message: "Đã đăng ký tham gia buổi tập" };
 }
 
@@ -152,7 +150,7 @@ export async function unregisterFromTraining(trainingId: string): Promise<Action
     return { error: "Không thể hủy đăng ký" };
   }
 
-  const countResult = await adjustParticipantCount(trainingId, -1);
+  const countResult = await decrementParticipantCount(trainingId);
   if (countResult.error) {
     await supabase.from("training_participants").insert({
       training_id: trainingId,
@@ -161,6 +159,6 @@ export async function unregisterFromTraining(trainingId: string): Promise<Action
     return { error: countResult.error };
   }
 
-  revalidateTrainingPages();
+  revalidateTrainingPages(trainingId);
   return { success: true, message: "Đã hủy đăng ký" };
 }
