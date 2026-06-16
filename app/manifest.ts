@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
+    id: '/',
     name: "CLB Chạy bộ CMC Global",
     short_name: "CMC Runner",
     description: "Nơi kết nối những người yêu thể thao của CMC Global",
