@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { getClubInfo } from "@/app/actions/clubInfoActions";
-import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { renderEditorContent } from "@/lib/utils/editorjs";
 
 export const revalidate = 3600;
 
@@ -41,7 +41,7 @@ export default async function AboutPage() {
       {clubInfo?.content ? (
         <div
           className="prose prose-slate max-w-none dark:prose-invert"
-          dangerouslySetInnerHTML={{ __html: cleanHtmlContent(clubInfo.content) }}
+          dangerouslySetInnerHTML={{ __html: renderEditorContent(clubInfo.content) }}
         />
       ) : (
         <div className="prose prose-slate max-w-none space-y-6 text-muted-foreground dark:prose-invert">

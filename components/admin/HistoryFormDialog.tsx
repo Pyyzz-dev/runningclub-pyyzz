@@ -1,7 +1,8 @@
 "use client";
 
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { RichTextEditorLazy as RichTextEditor } from "@/components/admin/RichTextEditorLazy";
+import { EditorJsLazy as EditorJs } from "@/components/admin/EditorJsLazy";
+import { isEmptyEditorContent } from "@/lib/utils/editorjs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,11 +24,6 @@ interface HistoryFormDialogProps {
   onOpenChange: (open: boolean) => void;
   entry?: ClubHistory | null;
   onSubmit: (formData: FormData) => Promise<void>;
-}
-
-function isEmptyHtml(html: string) {
-  const text = html.replace(/<[^>]*>/g, "").trim();
-  return !text || html === "<p></p>";
 }
 
 export function HistoryFormDialog({
@@ -61,7 +57,7 @@ export function HistoryFormDialog({
       return;
     }
 
-    if (isEmptyHtml(content)) {
+    if (isEmptyEditorContent(content)) {
       toast.error("Nội dung không được để trống");
       return;
     }
@@ -104,8 +100,9 @@ export function HistoryFormDialog({
 
           <div className="space-y-2">
             <Label>Nội dung</Label>
-            <RichTextEditor
-              content={content}
+            <EditorJs
+              key={`${open}-${entry?.id ?? "new"}`}
+              value={content}
               onChange={setContent}
               placeholder="Mô tả chi tiết sự kiện..."
               imageFolder="history"

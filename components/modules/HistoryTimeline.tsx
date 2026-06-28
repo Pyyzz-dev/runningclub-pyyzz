@@ -3,7 +3,7 @@
 import { YearTimeline } from "@/components/history/YearTimeline";
 import { formatDateTime, getYearFromDateString } from "@/lib/format";
 import type { ClubHistory } from "@/lib/supabase/types";
-import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { renderEditorContent } from "@/lib/utils/editorjs";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -129,7 +129,7 @@ export function HistoryTimeline({ items, className }: HistoryTimelineProps) {
                           <div
                             className="prose prose-sm mt-2 max-w-none text-muted-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-md"
                             dangerouslySetInnerHTML={{
-                              __html: cleanHtmlContent(item.content),
+                              __html: renderEditorContent(item.content),
                             }}
                           />
                           {item.image_url && (

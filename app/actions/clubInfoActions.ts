@@ -5,7 +5,7 @@ import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { ClubHistory, ClubInfo } from "@/lib/supabase/types";
 import { toIsoDateTime } from "@/lib/format";
-import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { isEmptyEditorContent, normalizeContentForSave } from "@/lib/utils/editorjs";
 import { restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
@@ -56,7 +56,7 @@ function parseHistoryForm(formData: FormData) {
 
   return {
     title: String(formData.get("title") ?? "").trim(),
-    content: cleanHtmlContent(rawContent),
+    content: normalizeContentForSave(rawContent),
     event_date: toIsoDateTime(eventDate),
     image_url: (formData.get("image_url") as string) || null,
     order_index: Number(formData.get("order_index") ?? 0),
@@ -96,7 +96,7 @@ export async function updateClubInfo(
   const rawContent = String(formData.get("content") ?? "");
   const coverImageUrl = String(formData.get("coverImageUrl") ?? "").trim() || null;
 
-  if (!rawContent.trim() || rawContent === "<p></p>") {
+  if (isEmptyEditorContent(rawContent)) {
     return { error: "Nội dung không được để trống" };
   }
 
@@ -104,7 +104,7 @@ export async function updateClubInfo(
   const { data, error } = await supabase
     .from("club_info")
     .update({
-      content: cleanHtmlContent(rawContent),
+      content: normalizeContentForSave(rawContent),
       cover_image_url: coverImageUrl,
       updated_at: new Date().toISOString(),
     })

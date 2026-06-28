@@ -89,7 +89,11 @@ export function LeaderboardTableWithRefresh({
       ) : error ? (
         <p className="py-8 text-center text-destructive">{error}</p>
       ) : (
-        <LeaderboardTable data={data} currentMemberName={currentMemberName} />
+        <LeaderboardTable
+          data={data}
+          currentMemberName={currentMemberName}
+          itemsPerPage={10}
+        />
       )}
     </div>
   );

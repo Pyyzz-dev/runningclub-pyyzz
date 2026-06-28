@@ -3,6 +3,7 @@
 import {
   getAchievements,
   getAllMembers,
+  getApprovedMembers,
   getAllPosts,
   getAllPostsAdmin,
   getAllTrainings,
@@ -101,4 +102,8 @@ export async function fetchLeaderboard(
 
 export async function fetchAllMembers() {
   return getAllMembers();
+}
+
+export async function fetchApprovedMembers() {
+  return getApprovedMembers();
 }

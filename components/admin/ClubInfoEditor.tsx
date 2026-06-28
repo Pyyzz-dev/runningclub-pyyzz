@@ -2,7 +2,8 @@
 
 import { updateClubInfo } from "@/app/actions/clubInfoActions";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { RichTextEditorLazy as RichTextEditor } from "@/components/admin/RichTextEditorLazy";
+import { EditorJsLazy as EditorJs } from "@/components/admin/EditorJsLazy";
+import { isEmptyEditorContent, renderEditorContent } from "@/lib/utils/editorjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +18,6 @@ interface ClubInfoEditorProps {
   initialData: ClubInfo | null;
 }
 
-function isEmptyHtml(html: string) {
-  const text = html.replace(/<[^>]*>/g, "").trim();
-  return !text || html === "<p></p>";
-}
-
 export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
   const router = useRouter();
   const [content, setContent] = useState(initialData?.content ?? "");
@@ -29,7 +25,7 @@ export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (isEmptyHtml(content)) {
+    if (isEmptyEditorContent(content)) {
       toast.error("Nội dung không được để trống");
       return;
     }
@@ -77,8 +73,9 @@ export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
 
         <div className="space-y-2">
           <Label>Nội dung</Label>
-          <RichTextEditor
-            content={content}
+          <EditorJs
+            key={initialData?.id ?? "club-info"}
+            value={content}
             onChange={setContent}
             placeholder="Nhập nội dung giới thiệu..."
             imageFolder="introduce"
@@ -101,7 +98,9 @@ export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
         <div
           className="prose max-w-none [&_img]:max-w-full [&_img]:rounded-md"
           dangerouslySetInnerHTML={{
-            __html: content || "<p class='text-muted-foreground'>Nội dung xem trước...</p>",
+            __html:
+              renderEditorContent(content) ||
+              "<p class='text-muted-foreground'>Nội dung xem trước...</p>",
           }}
         />
       </div>

@@ -8,7 +8,7 @@ import { Container } from "@/components/common/Container";
 import { Button } from "@/components/ui/button";
 import { fetchHistoryEventById } from "@/app/actions/dataActions";
 import { formatPublishedAt } from "@/lib/format";
-import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { renderEditorContent } from "@/lib/utils/editorjs";
 
 export const revalidate = 3600;
 
@@ -70,7 +70,7 @@ export default async function HistoryEventPage({ params }: HistoryEventPageProps
 
         <div
           className="prose prose-lg prose-slate mt-8 max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg"
-          dangerouslySetInnerHTML={{ __html: cleanHtmlContent(event.content) }}
+          dangerouslySetInnerHTML={{ __html: renderEditorContent(event.content) }}
         />
       </article>
     </Container>

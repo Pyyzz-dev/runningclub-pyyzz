@@ -1,8 +1,8 @@
 import type { StorageSubFolder } from "@/lib/supabase/storage-config";
 
-export interface RichTextEditorProps {
-  content: string;
-  onChange: (html: string) => void;
+export interface EditorJsProps {
+  value: string;
+  onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   imageFolder?: StorageSubFolder;

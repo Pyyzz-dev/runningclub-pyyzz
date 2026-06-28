@@ -2,7 +2,8 @@
 
 import { createPost, updatePost } from "@/app/actions/postActions";
 import { ImageUploader } from "@/components/admin/ImageUploader";
-import { RichTextEditorLazy as RichTextEditor } from "@/components/admin/RichTextEditorLazy";
+import { EditorJsLazy as EditorJs } from "@/components/admin/EditorJsLazy";
+import { isEmptyEditorContent } from "@/lib/utils/editorjs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,11 +31,6 @@ interface PostFormDialogProps {
   onOpenChange: (open: boolean) => void;
   post?: PostWithAuthorEmail | null;
   onSuccess?: () => void;
-}
-
-function isEmptyHtml(html: string) {
-  const text = html.replace(/<[^>]*>/g, "").trim();
-  return !text || html === "<p></p>";
 }
 
 export function PostFormDialog({
@@ -65,7 +61,7 @@ export function PostFormDialog({
       toast.error("Tiêu đề không được để trống");
       return;
     }
-    if (isEmptyHtml(content)) {
+    if (isEmptyEditorContent(content)) {
       toast.error("Nội dung không được để trống");
       return;
     }
@@ -131,8 +127,9 @@ export function PostFormDialog({
 
           <div className="space-y-2">
             <Label>Nội dung</Label>
-            <RichTextEditor
-              content={content}
+            <EditorJs
+              key={`${open}-${post?.id ?? "new"}`}
+              value={content}
               onChange={setContent}
               placeholder="Viết nội dung bài viết..."
               imageFolder="posts"

@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { fetchCurrentUser } from "@/app/actions/dataActions";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { CLUB_DESCRIPTION, CLUB_LOGO_URL, CLUB_NAME } from "@/lib/site-config";
 import "./globals.css";
 
@@ -24,7 +25,7 @@ export const metadata: Metadata = {
     template: `%s | ${CLUB_NAME}`,
   },
   description: CLUB_DESCRIPTION,
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/favicon.ico", sizes: "any" }],
     apple: [{ url: CLUB_LOGO_URL, type: "image/jpeg" }],
@@ -54,6 +55,7 @@ export default async function RootLayout({
           </ConditionalSiteChrome>
           <Toaster richColors position="top-right" />
           <GlobalToasts />
+          <ServiceWorkerRegistration />
         </AuthProvider>
       </body>
     </html>

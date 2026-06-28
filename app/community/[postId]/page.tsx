@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { fetchCurrentUser, fetchPostById } from "@/app/actions/dataActions";
 import { formatPublishedAt } from "@/lib/format";
-import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { renderEditorContent } from "@/lib/utils/editorjs";
 
 export const revalidate = 3600;
 
@@ -98,7 +98,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
           className="prose prose-lg prose-slate max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg"
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
-            __html: cleanHtmlContent(post.content),
+            __html: renderEditorContent(post.content),
           }}
         />
 

@@ -950,6 +950,21 @@ export async function getAllMembers(): Promise<DbResult<User[]>> {
   return { data, error: error?.message ?? null };
 }
 
+export async function getApprovedMembers(): Promise<DbResult<User[]>> {
+  if (!(await isAdmin())) {
+    return { data: null, error: "Không có quyền thực hiện thao tác này" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, email, full_name, username, role, created_at, remarks, avatar_url")
+    .eq("role", "member")
+    .order("created_at", { ascending: false });
+
+  return { data, error: error?.message ?? null };
+}
+
 export async function createMemberAccount(
   email: string,
   password: string,

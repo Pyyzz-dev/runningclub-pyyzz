@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { PostStatus, PostWithAuthorEmail } from "@/lib/supabase/types";
-import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
+import { normalizeContentForSave } from "@/lib/utils/editorjs";
 import { isNotDeleted, restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
@@ -15,7 +15,7 @@ function parsePostForm(formData: FormData) {
   const rawContent = String(formData.get("content") ?? "").trim();
   return {
     title: String(formData.get("title") ?? "").trim(),
-    content: cleanHtmlContent(rawContent),
+    content: normalizeContentForSave(rawContent),
     cover_image_url: (formData.get("cover_image_url") as string) || null,
     status: (formData.get("status") as PostStatus) || "draft",
   };

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
-import { HistoryEventList } from "@/components/history/HistoryEventList";
+import { HistoryTimeline } from "@/components/history/HistoryTimeline";
 import { fetchHistoryTimeline } from "@/app/actions/dataActions";
 
 export const revalidate = 3600;
@@ -35,7 +35,7 @@ export default async function HistoryPage() {
         {error ? (
           <p className="text-center text-destructive">{error}</p>
         ) : (
-          <HistoryEventList items={listItems} />
+          <HistoryTimeline items={listItems} />
         )}
       </Section>
     </>
