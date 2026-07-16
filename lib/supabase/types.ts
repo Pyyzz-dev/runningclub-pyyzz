@@ -293,6 +293,40 @@ export interface Database {
           },
         ];
       };
+      event_participants: {
+        Row: {
+          id: string;
+          event_id: string;
+          user_id: string;
+          registered_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          user_id: string;
+          registered_at?: string;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          user_id?: string;
+          registered_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "event_participants_event_id_fkey";
+            columns: ["event_id"];
+            referencedRelation: "events";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "event_participants_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       events: {
         Row: {
           id: string;
@@ -497,6 +531,14 @@ export interface Database {
       };
       decrement_training_count: {
         Args: { training_id: string };
+        Returns: undefined;
+      };
+      increment_event_count: {
+        Args: { event_id: string };
+        Returns: undefined;
+      };
+      decrement_event_count: {
+        Args: { event_id: string };
         Returns: undefined;
       };
     };

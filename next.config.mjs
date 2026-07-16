@@ -35,6 +35,9 @@ const nextConfig = {
   experimental: {
     optimizeCss: false,
     webpackBuildWorker: false,
+    serverActions: {
+      bodySizeLimit: "10mb",
+    },
   },
   async headers() {
     return [

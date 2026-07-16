@@ -12,19 +12,35 @@ import {
   Users,
 } from "lucide-react";
 import { fetchCurrentUser, fetchEventById } from "@/app/actions/dataActions";
+import {
+  getParticipationStatus,
+} from "@/app/actions/eventParticipantActions";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { Container } from "@/components/common/Container";
+import { HydrationSafeDateTime } from "@/components/common/HydrationSafeDateTime";
 import { AdminParticipantUpdate } from "@/components/events/AdminParticipantUpdate";
+import { EventDetailParticipationSection } from "@/components/events/EventDetailParticipationSection";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatPublishedAt } from "@/lib/format";
+import { createClient } from "@/lib/supabase/server";
 
 export const revalidate = 3600;
 
 type EventDetailPageProps = {
   params: Promise<{ eventId: string }>;
+};
+
+type ParticipantRow = {
+  registered_at: string;
+  users: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
 };
 
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
@@ -35,6 +51,8 @@ export async function generateMetadata({ params }: EventDetailPageProps): Promis
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {
   const { eventId } = await params;
+  const supabase = await createClient();
+
   const [{ data: event, error }, { data: user }] = await Promise.all([
     fetchEventById(eventId),
     fetchCurrentUser(),
@@ -44,6 +62,26 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     notFound();
   }
 
+  const { data: participantRows, error: participantsError } = await supabase
+    .from("event_participants")
+    .select(
+      `
+      registered_at,
+      users!inner (
+        id,
+        full_name,
+        avatar_url
+      )
+    `
+    )
+    .eq("event_id", eventId)
+    .order("registered_at", { ascending: true });
+
+  if (participantsError) {
+    console.error("Failed to fetch event participants:", participantsError.message);
+  }
+
+  const participants = (participantRows ?? []) as ParticipantRow[];
   const isAdmin = user?.role === "admin";
   const participantCount = event.participant_count ?? 0;
   const isUpcoming = new Date(event.event_date) >= new Date();
@@ -51,6 +89,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
     ? new Date(event.registration_deadline) < new Date()
     : false;
   const registrationOpen = !isRegistrationDeadlinePassed;
+  const canJoin = isUpcoming && registrationOpen;
+  const closedMessage = !isUpcoming
+    ? "Sự kiện đã kết thúc"
+    : "Đã hết hạn đăng ký";
+
+  const { joined: isJoined } = user
+    ? await getParticipationStatus(eventId, user.id)
+    : { joined: false };
 
   return (
     <Container className="section-padding">
@@ -122,12 +168,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                     <span>Hạn đăng ký: {formatPublishedAt(event.registration_deadline)}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Users className="h-5 w-5 shrink-0" />
-                  <span>
-                    Số lượng đã đăng ký: <strong>{participantCount}</strong> thành viên
-                  </span>
-                </div>
+                <EventDetailParticipationSection
+                  eventId={event.id}
+                  userId={user?.id ?? null}
+                  initialJoined={isJoined}
+                  canJoin={canJoin}
+                  closedMessage={closedMessage}
+                  initialParticipantCount={participantCount}
+                />
               </CardContent>
             </Card>
 
@@ -149,14 +197,14 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <ExternalLink className="h-5 w-5" />
-                    Đăng ký tham gia
+                    Đăng ký bên ngoài
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {registrationOpen && isUpcoming ? (
                     <>
                       <p className="text-sm text-muted-foreground">
-                        Nhấn nút bên dưới để đăng ký tham gia sự kiện.
+                        Nhấn nút bên dưới để đăng ký qua liên kết bên ngoài.
                       </p>
                       <Button asChild className="w-full bg-blue-600 hover:bg-blue-700">
                         <a
@@ -183,12 +231,39 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <UserCheck className="h-5 w-5" />
-                  Thành viên tham gia
+                  Danh sách tham gia ({participantCount})
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-primary">{participantCount}</p>
-                <p className="mt-1 text-sm text-muted-foreground">thành viên đã đăng ký</p>
+                {participants.length > 0 ? (
+                  <div className="space-y-3">
+                    {participants.map((participant) => (
+                      <div
+                        key={participant.users.id}
+                        className="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/50"
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={participant.users.avatar_url ?? undefined} />
+                          <AvatarFallback className="bg-primary/10 text-primary">
+                            {participant.users.full_name?.charAt(0) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="font-medium">{participant.users.full_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            Tham gia lúc:{" "}
+                            <HydrationSafeDateTime date={participant.registered_at} />
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <Users className="mx-auto mb-2 h-12 w-12 opacity-50" />
+                    <p>Chưa có ai tham gia</p>
+                  </div>
+                )}
                 {isAdmin && (
                   <AdminParticipantUpdate
                     eventId={event.id}
