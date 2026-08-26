@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 type ActionResult =
   | { success: true; message: string }
@@ -16,26 +16,39 @@ function revalidateEventPages(eventId?: string) {
   }
 }
 
-async function incrementParticipantCount(eventId: string): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("increment_event_count", {
-    event_id: eventId,
-  });
+function mapInsertError(message: string): string {
+  if (message.includes("event_participants") && message.includes("does not exist")) {
+    return "Bảng tham gia sự kiện chưa được cấu hình. Vui lòng chạy migration Supabase 018.";
+  }
+  if (message.includes("duplicate key") || message.includes("unique constraint")) {
+    return "Bạn đã tham gia sự kiện này rồi";
+  }
+  if (message.includes("foreign key")) {
+    return "Tài khoản chưa được đồng bộ với hệ thống thành viên";
+  }
+  return "Không thể tham gia sự kiện";
+}
 
-  if (error) {
+async function syncEventParticipantCount(eventId: string): Promise<{ error?: string }> {
+  const admin = createAdminClient();
+
+  const { count, error: countError } = await admin
+    .from("event_participants")
+    .select("*", { count: "exact", head: true })
+    .eq("event_id", eventId);
+
+  if (countError) {
+    console.error("[joinEvent] sync count query failed:", countError.message);
     return { error: "Không thể cập nhật số lượng tham gia" };
   }
 
-  return {};
-}
+  const { error: updateError } = await admin
+    .from("events")
+    .update({ participant_count: count ?? 0 })
+    .eq("id", eventId);
 
-async function decrementParticipantCount(eventId: string): Promise<{ error?: string }> {
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("decrement_event_count", {
-    event_id: eventId,
-  });
-
-  if (error) {
+  if (updateError) {
+    console.error("[joinEvent] sync count update failed:", updateError.message);
     return { error: "Không thể cập nhật số lượng tham gia" };
   }
 
@@ -52,7 +65,11 @@ export async function getParticipationStatus(eventId: string, userId: string) {
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (error) return { joined: false };
+  if (error) {
+    console.error("[getParticipationStatus] query failed:", error.message);
+    return { joined: false };
+  }
+
   return { joined: !!data };
 }
 
@@ -66,7 +83,10 @@ export async function getUserEventParticipations(
     .select("event_id")
     .eq("user_id", userId);
 
-  if (error) return {};
+  if (error) {
+    console.error("[getUserEventParticipations] query failed:", error.message);
+    return {};
+  }
 
   return Object.fromEntries(
     (data ?? []).map((row) => [row.event_id, true] as const)
@@ -101,10 +121,11 @@ export async function joinEvent(eventId: string): Promise<ActionResult> {
   });
 
   if (insertError) {
-    return { error: "Không thể tham gia sự kiện" };
+    console.error("[joinEvent] insert failed:", insertError.message);
+    return { error: mapInsertError(insertError.message) };
   }
 
-  const countResult = await incrementParticipantCount(eventId);
+  const countResult = await syncEventParticipantCount(eventId);
   if (countResult.error) {
     await supabase
       .from("event_participants")
@@ -147,10 +168,11 @@ export async function leaveEvent(eventId: string): Promise<ActionResult> {
     .eq("user_id", user.id);
 
   if (deleteError) {
+    console.error("[leaveEvent] delete failed:", deleteError.message);
     return { error: "Không thể rời sự kiện" };
   }
 
-  const countResult = await decrementParticipantCount(eventId);
+  const countResult = await syncEventParticipantCount(eventId);
   if (countResult.error) {
     await supabase.from("event_participants").insert({
       event_id: eventId,
