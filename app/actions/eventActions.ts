@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { Event } from "@/lib/supabase/types";
-import { toIsoDateTime } from "@/lib/format";
+import { fromDateInputValue } from "@/lib/format";
 import { restore, softDelete } from "@/lib/utils/softDelete";
 
 type ActionResult<T = undefined> =
@@ -55,9 +55,9 @@ function parseEventForm(formData: FormData) {
 
   return {
     ...parsed,
-    event_date: toIsoDateTime(parsed.event_date),
+    event_date: fromDateInputValue(parsed.event_date),
     registration_deadline: parsed.registration_deadline
-      ? toIsoDateTime(parsed.registration_deadline)
+      ? fromDateInputValue(parsed.registration_deadline, true)
       : null,
   };
 }

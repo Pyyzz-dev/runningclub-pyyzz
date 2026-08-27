@@ -25,7 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatPublishedAt } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const revalidate = 3600;
@@ -154,7 +154,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               <CardContent className="space-y-3">
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <Calendar className="h-5 w-5 shrink-0" />
-                  <span>{formatPublishedAt(event.event_date)}</span>
+                  <span>{formatDate(event.event_date)}</span>
                 </div>
                 {event.location && (
                   <div className="flex items-center gap-3 text-muted-foreground">
@@ -165,7 +165,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
                 {event.registration_deadline && (
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <Clock className="h-5 w-5 shrink-0" />
-                    <span>Hạn đăng ký: {formatPublishedAt(event.registration_deadline)}</span>
+                    <span>Hạn đăng ký: {formatDate(event.registration_deadline)}</span>
                   </div>
                 )}
                 <EventDetailParticipationSection

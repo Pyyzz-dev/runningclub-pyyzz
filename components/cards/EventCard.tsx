@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import type { Event } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { Calendar, ExternalLink, MapPin, Users } from "lucide-react";
@@ -147,7 +147,7 @@ export function EventCard({
       <CardContent className="flex-1 space-y-3 pt-0">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4 shrink-0" />
-          <span>{formatDateTime(event.event_date)}</span>
+          <span>{formatDate(event.event_date)}</span>
         </div>
 
         {event.location && (
@@ -169,7 +169,7 @@ export function EventCard({
 
         {event.registration_deadline && (
           <p className="text-xs text-muted-foreground">
-            Hạn đăng ký: {formatDateTime(event.registration_deadline)}
+            Hạn đăng ký: {formatDate(event.registration_deadline)}
             {!registrationOpen && " (đã hết hạn)"}
           </p>
         )}

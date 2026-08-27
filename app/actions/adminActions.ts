@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { LeaderboardPeriodType } from "@/lib/supabase/types";
-import { toIsoDateTime } from "@/lib/format";
+import { fromDateInputValue, toIsoDateTime } from "@/lib/format";
 import {
   createEvent as createEventHelper,
   createMemberAccount as createMemberAccountHelper,
@@ -161,9 +161,9 @@ export async function addEvent(formData: FormData) {
 
   const result = await createEventHelper({
     ...parsed.data,
-    event_date: toIsoDateTime(parsed.data.event_date),
+    event_date: fromDateInputValue(parsed.data.event_date),
     registration_deadline: parsed.data.registration_deadline
-      ? toIsoDateTime(parsed.data.registration_deadline)
+      ? fromDateInputValue(parsed.data.registration_deadline, true)
       : null,
   });
 

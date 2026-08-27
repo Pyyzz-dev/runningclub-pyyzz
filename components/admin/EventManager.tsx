@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import type { Event } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { Edit, ExternalLink, ImageIcon, Loader2, Minus, Plus, Search, Trash2 } from "lucide-react";
@@ -195,7 +195,7 @@ export function EventManager({ events, className }: EventManagerProps) {
                   </TableCell>
                   <TableCell>{event.location}</TableCell>
                   <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                    {formatDateTime(event.event_date)}
+                    {formatDate(event.event_date)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

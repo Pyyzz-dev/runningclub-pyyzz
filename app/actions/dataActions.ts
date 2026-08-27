@@ -16,7 +16,9 @@ import {
   getPostById,
   getTrainingById,
   getUpcomingEvents,
+  getEventYears,
   getUpcomingTraining,
+  type EventQueryFilters,
 } from "@/lib/utils/db-helpers";
 import type { LeaderboardPeriodType } from "@/lib/supabase/types";
 import { getUserTrainingRegistrations } from "@/app/actions/trainingParticipantActions";
@@ -61,8 +63,15 @@ export async function fetchAllTrainings() {
   return getAllTrainings();
 }
 
-export async function fetchUpcomingEvents(limit = 10) {
-  return getUpcomingEvents(limit);
+export async function fetchUpcomingEvents(
+  limit = 10,
+  filters: EventQueryFilters = {}
+) {
+  return getUpcomingEvents(limit, filters);
+}
+
+export async function fetchEventYears() {
+  return getEventYears();
 }
 
 export async function fetchEventById(id: string) {

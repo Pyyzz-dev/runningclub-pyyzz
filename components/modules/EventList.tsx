@@ -3,6 +3,7 @@
 import { EventCard } from "@/components/cards/EventCard";
 import type { Event } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
 import { useState } from "react";
 
 interface EventListProps {
@@ -11,6 +12,8 @@ interface EventListProps {
   userId?: string | null;
   joinedMap?: Record<string, boolean>;
   enableParticipation?: boolean;
+  searchTerm?: string;
+  hasFilters?: boolean;
 }
 
 export function EventList({
@@ -19,10 +22,22 @@ export function EventList({
   userId = null,
   joinedMap = {},
   enableParticipation = false,
+  searchTerm = "",
+  hasFilters = false,
 }: EventListProps) {
   const [localCounts, setLocalCounts] = useState<Record<string, number>>({});
 
   if (events.length === 0) {
+    if (hasFilters || searchTerm.trim()) {
+      return (
+        <div className={cn("py-12 text-center text-muted-foreground", className)}>
+          <Search className="mx-auto mb-3 h-12 w-12 opacity-50" />
+          <p>Không tìm thấy sự kiện nào phù hợp với bộ lọc</p>
+          <p className="mt-1 text-sm">Thử tìm kiếm với từ khóa khác</p>
+        </div>
+      );
+    }
+
     return (
       <p className={cn("py-12 text-center text-muted-foreground", className)}>
         Chưa có sự kiện sắp tới.

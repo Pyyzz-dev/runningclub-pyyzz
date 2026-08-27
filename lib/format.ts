@@ -18,13 +18,27 @@ function getPart(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPart
 }
 
 /** YYYY-MM-DD in Vietnam timezone (for date inputs). */
-export function toDateInputValue(date: Date): string {
+export function toDateInputValue(date: Date | string | null | undefined): string {
+  if (!date) return "";
+  const parsed = date instanceof Date ? date : parseStableDate(date);
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: VIETNAM_TZ,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-  }).format(date);
+  }).format(parsed);
+}
+
+/** Store a calendar date in Vietnam time (UTC+7, no DST). */
+export function fromDateInputValue(value: string, endOfDay = false): string {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return endOfDay
+      ? `${trimmed}T23:59:59.999+07:00`
+      : `${trimmed}T00:00:00.000+07:00`;
+  }
+  return toIsoDateTime(trimmed);
 }
 
 export function formatRelativeTime(date: string | Date | null): string {
@@ -61,10 +75,14 @@ export function fromDatetimeLocal(value: string): string {
 
 export function toIsoDateTime(value: string): string {
   if (!value) return value;
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value) && value.endsWith("Z")) {
-    return value;
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T00:00:00.000+07:00`;
   }
-  return new Date(value).toISOString();
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(trimmed) && trimmed.endsWith("Z")) {
+    return trimmed;
+  }
+  return new Date(trimmed).toISOString();
 }
 
 /** Extract year without timezone drift (for grouping / timelines). */

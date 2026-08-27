@@ -636,20 +636,89 @@ export async function getUpcomingTraining(
   return { data: data as TrainingSchedule[] | null, error: error?.message ?? null };
 }
 
+export type EventQueryFilters = {
+  search?: string;
+  year?: number;
+  month?: number;
+};
+
+function monthDateRange(year: number, month: number) {
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const end =
+    month === 12
+      ? `${year + 1}-01-01`
+      : `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  return { start, end };
+}
+
+export async function getEventYears(): Promise<number[]> {
+  const supabase = await createClient();
+  const { data, error } = await isNotDeleted(
+    supabase.from("events").select("event_date")
+  ).order("event_date", { ascending: false });
+
+  if (error || !data) return [];
+
+  const years = new Set<number>();
+  for (const row of data) {
+    const year = Number(String(row.event_date).slice(0, 4));
+    if (Number.isInteger(year) && year >= 1900 && year <= 2100) {
+      years.add(year);
+    }
+  }
+
+  return [...years].sort((a, b) => b - a);
+}
+
 export async function getUpcomingEvents(
-  limit = 10
+  limit = 10,
+  filters: EventQueryFilters = {}
 ): Promise<DbResult<Event[]>> {
   const supabase = await createClient();
   const now = new Date().toISOString();
+  const trimmedSearch = filters.search?.trim();
+  const year = filters.year;
+  const month = filters.month;
+  const hasDateFilter = Boolean(year || month);
 
-  const { data, error } = await isNotDeleted(
+  let query = isNotDeleted(
     supabase.from("events").select(
       "id, name, description, location, event_date, registration_deadline, event_link, participant_count, image_url, deleted_at"
     )
-  )
-    .gte("event_date", now)
-    .order("event_date", { ascending: true })
-    .limit(limit);
+  ).order("event_date", { ascending: true });
+
+  if (!hasDateFilter) {
+    query = query.gte("event_date", now);
+  } else if (year && month) {
+    const { start, end } = monthDateRange(year, month);
+    query = query.gte("event_date", start).lt("event_date", end);
+  } else if (year) {
+    query = query
+      .gte("event_date", `${year}-01-01`)
+      .lt("event_date", `${year + 1}-01-01`);
+  } else if (month) {
+    const availableYears = await getEventYears();
+    if (availableYears.length === 0) {
+      return { data: [], error: null };
+    }
+
+    const monthFilters = availableYears
+      .map((eventYear) => {
+        const { start, end } = monthDateRange(eventYear, month);
+        return `and(event_date.gte.${start},event_date.lt.${end})`;
+      })
+      .join(",");
+
+    query = query.or(monthFilters);
+  }
+
+  if (trimmedSearch) {
+    query = query.ilike("name", `%${trimmedSearch}%`);
+  }
+
+  const { data, error } = await query.limit(
+    trimmedSearch || hasDateFilter ? 200 : limit
+  );
 
   return { data, error: error?.message ?? null };
 }

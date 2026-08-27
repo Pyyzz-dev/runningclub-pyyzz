@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { fromDatetimeLocal } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
@@ -52,9 +51,9 @@ export function AdminEventForm({ className, onSuccess }: AdminEventFormProps) {
     formData.set("name", values.name);
     if (values.description) formData.set("description", values.description);
     if (values.location) formData.set("location", values.location);
-    formData.set("event_date", fromDatetimeLocal(values.event_date));
+    formData.set("event_date", values.event_date);
     if (values.registration_deadline) {
-      formData.set("registration_deadline", fromDatetimeLocal(values.registration_deadline));
+      formData.set("registration_deadline", values.registration_deadline);
     }
     if (values.event_link) formData.set("event_link", values.event_link);
 
@@ -102,7 +101,7 @@ export function AdminEventForm({ className, onSuccess }: AdminEventFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="event_date">Ngày sự kiện</Label>
-          <Input id="event_date" type="datetime-local" {...register("event_date")} />
+          <Input id="event_date" type="date" {...register("event_date")} />
           {errors.event_date && (
             <p className="text-sm text-destructive">{errors.event_date.message}</p>
           )}
@@ -112,7 +111,7 @@ export function AdminEventForm({ className, onSuccess }: AdminEventFormProps) {
           <Label htmlFor="registration_deadline">Hạn đăng ký</Label>
           <Input
             id="registration_deadline"
-            type="datetime-local"
+            type="date"
             {...register("registration_deadline")}
           />
         </div>
