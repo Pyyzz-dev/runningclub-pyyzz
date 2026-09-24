@@ -1,0 +1,14 @@
+---
+description: Quy ước viết React component
+globs: "**/*.tsx,**/*.jsx"
+alwaysApply: false
+---
+
+# React / Next.js components
+
+- Chỉ function component + hooks. Không thêm class component.
+- Một component export chính mỗi file. Tên file PascalCase trùng tên component (`EventCard.tsx` → `EventCard`).
+- Props: khai báo `interface XxxProps` ở đầu file. Không nhét union/object phức tạp trực tiếp vào chữ ký hàm.
+- Component > ~150 dòng (không tính JSX thuần): tách custom hook (`useXxx`) hoặc component con cùng thư mục.
+- Không gọi `supabase.from(...)` trong component. Data: Server Component / `app/actions/*` / helper trong `lib/`. Client chỉ gọi server action.
+- `'use client'` chỉ khi cần state, event handler, hoặc browser API. Mặc định để Server Component.

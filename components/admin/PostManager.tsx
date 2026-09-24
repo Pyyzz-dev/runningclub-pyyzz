@@ -39,6 +39,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 
 const PostFormDialog = dynamic(
   () =>
@@ -59,6 +60,7 @@ interface PostManagerProps {
 export function PostManager({ posts, className }: PostManagerProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 400);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [formOpen, setFormOpen] = useState(false);
   const [editPost, setEditPost] = useState<PostWithAuthorEmail | null>(null);
@@ -68,14 +70,14 @@ export function PostManager({ posts, className }: PostManagerProps) {
   const filtered = useMemo(() => {
     return posts.filter((post) => {
       const matchesSearch =
-        !search || post.title.toLowerCase().includes(search.toLowerCase());
+        !debouncedSearch || post.title.toLowerCase().includes(debouncedSearch.toLowerCase());
 
       const matchesStatus =
         statusFilter === "all" || post.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [posts, search, statusFilter]);
+  }, [posts, debouncedSearch, statusFilter]);
 
   const handleDelete = async () => {
     if (!deleteId) return;

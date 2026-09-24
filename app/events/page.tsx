@@ -11,7 +11,7 @@ import {
 } from "@/app/actions/dataActions";
 import { getUserEventParticipations } from "@/app/actions/eventParticipantActions";
 
-export const revalidate = 3600;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Sự kiện",

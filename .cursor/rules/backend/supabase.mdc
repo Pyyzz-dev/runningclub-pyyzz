@@ -1,0 +1,16 @@
+---
+description: Quy ước khi làm việc với Supabase
+globs: "**/supabase/**/*,**/*supabase*"
+alwaysApply: false
+---
+
+# Supabase client & queries
+
+- Server: `createClient()` / `createAdminClient()` từ `lib/supabase/server.ts`. Browser: `lib/supabase/client.ts`.
+- `SUPABASE_SERVICE_ROLE_KEY` chỉ trong server (`createAdminClient`). Không import admin client vào `'use client'`.
+- Select cột cần dùng. Tránh `select("*")` trên list public (homepage, `/events`) trừ khi đang lấy 1 row admin đầy đủ.
+- RLS: không `DISABLE ROW LEVEL SECURITY`. Policy mới thêm trong migration, không bypass bằng tắt RLS.
+- RPC count (`increment_*` / trigger) phải `SECURITY DEFINER` + `SET search_path = public` + `GRANT EXECUTE TO authenticated` khi user thường gọi được.
+- Storage: dùng `STORAGE_BUCKET_NAME` / `buildStoragePath()` trong `lib/supabase/storage-config.ts`, không hardcode tên bucket.
+
+<!-- TODO: Một số helper hiện vẫn `select("*")`. Khi sửa những file đó, thu hẹp cột. -->

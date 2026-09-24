@@ -1,12 +1,19 @@
 "use client";
 
-export type CompressionPreset = "medium";
+export type CompressionPreset = "medium" | "avatar";
 
 export const COMPRESSION_PRESETS = {
   medium: {
     maxWidth: 1200,
     quality: 0.8,
     mimeType: "image/jpeg" as const,
+    square: false,
+  },
+  avatar: {
+    maxWidth: 400,
+    quality: 0.8,
+    mimeType: "image/jpeg" as const,
+    square: true,
   },
 } as const;
 
@@ -19,13 +26,13 @@ export async function compressImage(
   file: File,
   preset: CompressionPreset = "medium"
 ): Promise<File> {
-  const { maxWidth, quality, mimeType } = COMPRESSION_PRESETS[preset];
+  const { maxWidth, quality, mimeType, square } = COMPRESSION_PRESETS[preset];
 
   if (!file.type.startsWith("image/")) {
     return file;
   }
 
-  if (file.size < MIN_SIZE_TO_COMPRESS) {
+  if (preset !== "avatar" && file.size < MIN_SIZE_TO_COMPRESS) {
     return file;
   }
 
@@ -35,10 +42,18 @@ export async function compressImage(
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement("canvas");
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceSize = Math.min(img.width, img.height);
         let width = img.width;
         let height = img.height;
 
-        if (width > maxWidth) {
+        if (square) {
+          sourceX = (img.width - sourceSize) / 2;
+          sourceY = (img.height - sourceSize) / 2;
+          width = maxWidth;
+          height = maxWidth;
+        } else if (width > maxWidth) {
           height = (height * maxWidth) / width;
           width = maxWidth;
         }
@@ -52,7 +67,11 @@ export async function compressImage(
           return;
         }
 
-        ctx.drawImage(img, 0, 0, width, height);
+        if (square) {
+          ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, width, height);
+        } else {
+          ctx.drawImage(img, 0, 0, width, height);
+        }
 
         canvas.toBlob(
           (blob) => {

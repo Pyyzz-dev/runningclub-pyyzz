@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { fromDatetimeLocal, toDatetimeLocal } from "@/lib/format";
+import { toDateInputValue } from "@/lib/format";
 import type { ClubHistory } from "@/lib/supabase/types";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -43,7 +43,7 @@ export function HistoryFormDialog({
     if (open) {
       setTitle(entry?.title ?? "");
       setContent(entry?.content ?? "");
-      setEventDate(toDatetimeLocal(entry?.event_date));
+      setEventDate(toDateInputValue(entry?.event_date));
       setImageUrl(entry?.image_url ?? "");
       setOrderIndex(entry?.order_index ?? 0);
     }
@@ -67,7 +67,7 @@ export function HistoryFormDialog({
       const formData = new FormData();
       formData.set("title", title.trim());
       formData.set("content", content);
-      formData.set("event_date", fromDatetimeLocal(eventDate));
+      formData.set("event_date", eventDate);
       formData.set("image_url", imageUrl);
       formData.set("order_index", String(orderIndex));
       await onSubmit(formData);
@@ -110,10 +110,10 @@ export function HistoryFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="history-date">Thời gian sự kiện</Label>
+            <Label htmlFor="history-date">Ngày sự kiện</Label>
             <Input
               id="history-date"
-              type="datetime-local"
+              type="date"
               value={eventDate}
               onChange={(e) => setEventDate(e.target.value)}
               required

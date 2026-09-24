@@ -1,0 +1,15 @@
+---
+description: Quy ước deploy với Vercel
+globs: "vercel.json,.vercel/**/*"
+alwaysApply: false
+---
+
+# Vercel
+
+- Env đổi trên Vercel: cập nhật Development, Preview, Production — cùng key như `.env.local`.
+- Preview: không trỏ `NEXT_PUBLIC_SUPABASE_URL` / service role vào production DB nếu đang test migration nguy hiểm. Dùng project/branch Supabase riêng khi có.
+- Không commit thư mục `.vercel/` (đã ignore). Không commit `.env.local`.
+- `vercel.json` headers/PWA: giữ JSON hợp lệ; không thêm rewrite phá `/manifest.json` hay `/sw.js`.
+- Cron (`app/api/cron/*`): bảo vệ bằng secret header, không public invoke.
+
+<!-- TODO: Repo chưa có pipeline preview ↔ Supabase branch tự động. Xác nhận quy trình preview DB trước khi coi rule này là bắt buộc. -->

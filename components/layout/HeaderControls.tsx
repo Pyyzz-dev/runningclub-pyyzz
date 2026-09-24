@@ -2,6 +2,7 @@
 
 import { navLinks } from "@/components/layout/header-config";
 import { useAuth } from "@/components/providers/AuthProvider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,6 +52,12 @@ export function HeaderAuthActions() {
 
   if (user) {
     const displayName = user.full_name?.trim() || "Thành viên";
+    const initials = displayName
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
 
     return (
       <div className="flex shrink-0 items-center gap-2">
@@ -61,7 +68,10 @@ export function HeaderAuthActions() {
               size="sm"
               className="flex items-center gap-1 px-2 sm:gap-2 sm:px-3"
             >
-              <User className="h-4 w-4 shrink-0" />
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={user.avatar_url ?? undefined} alt={displayName} />
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              </Avatar>
               <span className="max-w-[100px] truncate text-sm sm:max-w-[150px]">
                 {displayName}
               </span>

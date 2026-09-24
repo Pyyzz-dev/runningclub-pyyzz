@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { ClubHistory, ClubInfo } from "@/lib/supabase/types";
-import { toIsoDateTime } from "@/lib/format";
+import { toDateInputValue } from "@/lib/format";
 import { isEmptyEditorContent, normalizeContentForSave } from "@/lib/utils/editorjs";
 import { restore, softDelete } from "@/lib/utils/softDelete";
 
@@ -50,6 +50,14 @@ async function getOrCreateClubInfoId(): Promise<string | null> {
   return newClubInfo.id;
 }
 
+function parseHistoryDate(value: string): string {
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return toDateInputValue(trimmed);
+}
+
 function parseHistoryForm(formData: FormData) {
   const rawContent = String(formData.get("content") ?? "").trim();
   const eventDate = String(formData.get("event_date") ?? "");
@@ -57,7 +65,7 @@ function parseHistoryForm(formData: FormData) {
   return {
     title: String(formData.get("title") ?? "").trim(),
     content: normalizeContentForSave(rawContent),
-    event_date: toIsoDateTime(eventDate),
+    event_date: parseHistoryDate(eventDate),
     image_url: (formData.get("image_url") as string) || null,
     order_index: Number(formData.get("order_index") ?? 0),
   };

@@ -138,6 +138,52 @@ export interface Database {
           },
         ];
       };
+      history_comments: {
+        Row: {
+          id: string;
+          history_id: string;
+          user_id: string;
+          content: string;
+          image_url: string | null;
+          is_anonymous: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          history_id: string;
+          user_id: string;
+          content: string;
+          image_url?: string | null;
+          is_anonymous?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          history_id?: string;
+          user_id?: string;
+          content?: string;
+          image_url?: string | null;
+          is_anonymous?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "history_comments_history_id_fkey";
+            columns: ["history_id"];
+            referencedRelation: "club_history";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "history_comments_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       club_history: {
         Row: {
           id: string;
@@ -550,6 +596,7 @@ export interface Database {
 export type User = Database["public"]["Tables"]["users"]["Row"];
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
 export type Comment = Database["public"]["Tables"]["comments"]["Row"];
+export type HistoryComment = Database["public"]["Tables"]["history_comments"]["Row"];
 export type ClubHistory = Database["public"]["Tables"]["club_history"]["Row"];
 export type ClubInfo = Database["public"]["Tables"]["club_info"]["Row"];
 export type Achievement = Database["public"]["Tables"]["achievements"]["Row"];
@@ -572,6 +619,18 @@ export type PostWithAuthorAndCount = PostWithAuthor & {
 };
 
 export type CommentWithAuthor = Comment & {
+  author: Pick<User, "id" | "full_name" | "avatar_url">;
+  display_name: string;
+};
+
+export type HistoryCommentWithAuthor = {
+  id: string;
+  history_id: string;
+  user_id: string;
+  content: string;
+  image_url: string | null;
+  is_anonymous: boolean;
+  created_at: string;
   author: Pick<User, "id" | "full_name" | "avatar_url">;
   display_name: string;
 };

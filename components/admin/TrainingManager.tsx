@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/table";
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/format";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import { cn } from "@/lib/utils";
 import {
   getTrainingStatus,
@@ -64,6 +65,7 @@ export function TrainingManager({
 }: TrainingManagerProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 400);
   const [monthFilter, setMonthFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | TrainingStatus>("all");
   const [formOpen, setFormOpen] = useState(false);
@@ -83,9 +85,9 @@ export function TrainingManager({
   const filtered = useMemo(() => {
     return initialTrainings.filter((t) => {
       const matchesSearch =
-        !search ||
-        t.title.toLowerCase().includes(search.toLowerCase()) ||
-        (t.location?.toLowerCase().includes(search.toLowerCase()) ?? false);
+        !debouncedSearch ||
+        t.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (t.location?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false);
 
       const matchesMonth =
         !monthFilter ||
@@ -97,7 +99,7 @@ export function TrainingManager({
 
       return matchesSearch && matchesMonth && matchesStatus;
     });
-  }, [initialTrainings, search, monthFilter, statusFilter]);
+  }, [initialTrainings, debouncedSearch, monthFilter, statusFilter]);
 
   const handleSubmit = async (formData: FormData) => {
     if (editTraining) {

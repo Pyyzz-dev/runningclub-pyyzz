@@ -1,0 +1,15 @@
+---
+description: Quy ước viết test
+globs: "**/*.test.*,**/*.spec.*,**/__tests__/**/*"
+alwaysApply: false
+---
+
+# Tests
+
+- Đặt file cạnh nguồn (`EventCard.test.tsx`) hoặc `__tests__/`.
+- Một test = một hành vi. Tên: `should <expected> when <condition>`.
+- Không mock toàn bộ Supabase client cho integration DB. Dùng Supabase local (`supabase start`) hoặc test container.
+- Unit UI: test hành vi (nút, filter), không snapshot DOM lớn.
+- Không commit secret test vào repo; dùng env test riêng.
+
+<!-- TODO: `package.json` hiện không có Jest/Vitest/Playwright. Rule này chỉ áp dụng khi bắt đầu thêm test runner. -->

@@ -1,0 +1,13 @@
+---
+description: Quy ước styling
+globs: "**/*.tsx,**/*.css"
+alwaysApply: false
+---
+
+# Styling (Tailwind)
+
+- Dùng Tailwind utility có sẵn. Không tạo file CSS mới nếu class Tailwind giải quyết được.
+- Không dùng `style={{ ... }}` trừ giá trị runtime (width %, transform từ JS).
+- Thứ tự class: layout (`flex`, `grid`, `relative`) → spacing (`p-`, `m-`, `gap-`) → typography (`text-`, `font-`) → color (`bg-`, `text-muted`) → state (`hover:`, `disabled:`).
+- Màu/theme: token `primary`, `muted`, `destructive`, `border` — không hardcode hex trừ brand cố định đã có.
+- Component UI dùng `cn()` từ `lib/utils` khi merge `className` từ props.

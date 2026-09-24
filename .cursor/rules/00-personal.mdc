@@ -1,0 +1,9 @@
+---
+description: Quy tắc cá nhân áp dụng cho mọi file
+globs: "**/*"
+alwaysApply: true
+---
+
+# Personal rules
+
+<!-- TODO: Không tìm thấy `.cursor/rules/personal.mdc` trong repo khi tái cấu trúc (2026-09-14). Dán nguyên nội dung rule cá nhân cũ vào đây. Không tự bịa rule mới. -->

@@ -1,0 +1,15 @@
+---
+description: Quy ước state management
+globs: "**/*.tsx,**/*.jsx"
+alwaysApply: false
+---
+
+# State
+
+- Local UI: `useState` / `useReducer`. Không thêm Redux/Zustand/Jotai nếu chưa có trong `package.json`.
+- Filter/search trên URL (`searchParams`) khi cần share/reload được (như `/events?search=&year=&month=`).
+- Không đưa server data vào global client store. Fetch ở Server Component hoặc server action, truyền props.
+- Form: React Hook Form + zod khi form có nhiều field/validate; form dialog ngắn có thể `useState`.
+- Optimistic UI chỉ khi đã có server action tương ứng và rollback khi `{ error }` trả về.
+
+<!-- TODO: Repo hiện không có global store. Nếu sau này thêm thư viện state, cập nhật rule này. -->

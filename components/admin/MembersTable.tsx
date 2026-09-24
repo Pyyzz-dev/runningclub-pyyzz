@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MoreHorizontal, Search, User, Mail } from "lucide-react";
 import { formatDate } from "@/lib/format";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import type { User as ClubUser } from "@/lib/supabase/types";
 
 export type MemberRow = Pick<
@@ -46,10 +47,11 @@ function getInitials(name: string) {
 
 export function MembersTable({ members }: MembersTableProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredMembers = members.filter((member) => {
-    const query = searchTerm.toLowerCase();
+    const query = debouncedSearch.toLowerCase();
     return (
       member.full_name?.toLowerCase().includes(query) ||
       member.email?.toLowerCase().includes(query) ||
@@ -66,7 +68,7 @@ export function MembersTable({ members }: MembersTableProps) {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [debouncedSearch]);
 
   useEffect(() => {
     if (currentPage > totalPages) {

@@ -31,7 +31,9 @@ export async function getAllPosts(): Promise<PostWithAuthorEmail[]> {
   const supabase = await createClient();
   const { data: posts, error } = await supabase
     .from("posts")
-    .select(`*, author:users!posts_author_id_fkey(id, full_name, avatar_url)`)
+    .select(
+      "id, title, content, author_id, published_at, updated_at, status, cover_image_url, deleted_at, author:users!posts_author_id_fkey(id, full_name, avatar_url)"
+    )
     .order("published_at", { ascending: false, nullsFirst: false });
 
   if (error || !posts) return [];

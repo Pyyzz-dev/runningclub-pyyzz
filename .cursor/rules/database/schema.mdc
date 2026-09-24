@@ -1,0 +1,16 @@
+---
+description: Quy ước thiết kế schema
+globs: "supabase/migrations/**/*,**/schema.ts"
+alwaysApply: false
+---
+
+# Schema
+
+- Bảng mới: `id uuid PRIMARY KEY DEFAULT gen_random_uuid()`.
+- Cột thời gian: `timestamptz` + default `now()`. Thêm `created_at` / `updated_at` khi bảng là entity độc lập.
+- FK thật (`REFERENCES ... ON DELETE CASCADE/RESTRICT`), không lưu uuid dạng text không ràng buộc.
+- Tên bảng số nhiều snake_case (`event_participants`). Cột snake_case (`event_date`, `participant_count`).
+- Soft delete: `deleted_at timestamptz` + query qua `isNotDeleted()` nếu entity public có xóa tạm.
+- Unique cặp quan hệ: `UNIQUE (event_id, user_id)` cho bảng tham gia.
+
+<!-- TODO: Bảng `events` hiện không có `created_at`/`updated_at`. Rule này áp dụng bảng mới; đừng tự thêm cột vào `events` trừ khi có migration riêng được yêu cầu. -->

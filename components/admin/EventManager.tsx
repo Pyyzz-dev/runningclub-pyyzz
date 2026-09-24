@@ -38,6 +38,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 
 interface EventManagerProps {
   events: Event[];
@@ -47,6 +48,7 @@ interface EventManagerProps {
 export function EventManager({ events, className }: EventManagerProps) {
   const router = useRouter();
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 400);
   const [formOpen, setFormOpen] = useState(false);
   const [editEvent, setEditEvent] = useState<Event | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -56,14 +58,14 @@ export function EventManager({ events, className }: EventManagerProps) {
 
   const filtered = useMemo(() => {
     return events.filter((event) => {
-      if (!search) return true;
-      const q = search.toLowerCase();
+      if (!debouncedSearch) return true;
+      const q = debouncedSearch.toLowerCase();
       return (
         event.name.toLowerCase().includes(q) ||
         (event.location?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [events, search]);
+  }, [events, debouncedSearch]);
 
   const getCount = (event: Event) =>
     localCounts[event.id] ?? event.participant_count ?? 0;

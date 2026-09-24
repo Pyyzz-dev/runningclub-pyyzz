@@ -6,11 +6,13 @@ import { ArrowLeft } from "lucide-react";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { Container } from "@/components/common/Container";
 import { Button } from "@/components/ui/button";
-import { fetchHistoryEventById } from "@/app/actions/dataActions";
-import { formatPublishedAt } from "@/lib/format";
+import { fetchCurrentUser, fetchHistoryEventById } from "@/app/actions/dataActions";
+import { getHistoryComments } from "@/app/actions/historyCommentActions";
+import { HistoryCommentSection } from "@/components/history/HistoryCommentSection";
+import { formatDate } from "@/lib/format";
 import { renderEditorContent } from "@/lib/utils/editorjs";
 
-export const revalidate = 3600;
+export const revalidate = 0;
 
 type HistoryEventPageProps = {
   params: Promise<{ eventId: string }>;
@@ -29,6 +31,11 @@ export default async function HistoryEventPage({ params }: HistoryEventPageProps
   if (error || !event) {
     notFound();
   }
+
+  const [{ data: user }, comments] = await Promise.all([
+    fetchCurrentUser(),
+    getHistoryComments(event.id),
+  ]);
 
   return (
     <Container className="section-padding">
@@ -49,7 +56,7 @@ export default async function HistoryEventPage({ params }: HistoryEventPageProps
       </Button>
 
       <article className="mx-auto max-w-3xl animate-fade-in">
-        <time className="text-sm text-muted-foreground">{formatPublishedAt(event.event_date)}</time>
+        <time className="text-sm text-muted-foreground">{formatDate(event.event_date)}</time>
 
         <h1 className="mt-2 font-display text-3xl font-bold text-foreground md:text-4xl">
           {event.title}
@@ -72,6 +79,15 @@ export default async function HistoryEventPage({ params }: HistoryEventPageProps
           className="prose prose-lg prose-slate mt-8 max-w-none text-foreground dark:prose-invert [&_img]:max-w-full [&_img]:rounded-lg"
           dangerouslySetInnerHTML={{ __html: renderEditorContent(event.content) }}
         />
+
+        <div className="mt-12 border-t pt-8">
+          <HistoryCommentSection
+            historyId={event.id}
+            comments={comments}
+            isAdmin={user?.role === "admin"}
+            currentUserId={user?.id ?? null}
+          />
+        </div>
       </article>
     </Container>
   );

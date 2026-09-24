@@ -1,0 +1,13 @@
+---
+description: Quy ước authentication
+globs: "**/auth/**/*,**/middleware.ts"
+alwaysApply: false
+---
+
+# Auth
+
+- Refresh session trong `lib/supabase/middleware.ts` (pattern `@supabase/ssr` `getUser` / `getAll` cookies). Không bỏ middleware khi thêm route mới.
+- Route bảo vệ (`/admin/*`, mutate): check trên server (`requireAdmin`, `getUser`). `AuthGuard` client chỉ UX, không phải nguồn sự thật.
+- Dùng Supabase Auth (signIn/signUp/reset). Không tự hash password hay JWT.
+- Phân quyền theo `users.role` (`admin` | `member`). RLS policy so `auth.uid()` với `users.id`.
+- Redirect login kèm `?redirect=` về đúng trang (events/training) khi action yêu cầu đăng nhập.

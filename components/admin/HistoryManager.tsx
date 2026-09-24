@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import type { ClubHistory } from "@/lib/supabase/types";
-import { formatDateTime } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
   DndContext,
@@ -103,7 +103,7 @@ function SortableHistoryItem({
           )}
         </p>
         <p className="text-sm text-muted-foreground">
-          {formatDateTime(item.event_date)}
+          {formatDate(item.event_date)}
         </p>
       </div>
 

@@ -28,7 +28,9 @@ export async function getTrainings(): Promise<TrainingSchedule[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("training_schedule")
-    .select("*")
+    .select(
+      "id, title, description, location, start_time, end_time, created_by, deleted_at, participant_count"
+    )
     .order("start_time", { ascending: true });
 
   if (error) return [];

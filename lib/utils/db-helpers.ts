@@ -677,6 +677,9 @@ export async function getUpcomingEvents(
   const supabase = await createClient();
   const now = new Date().toISOString();
   const trimmedSearch = filters.search?.trim();
+  const escapedSearch = trimmedSearch
+    ? trimmedSearch.replace(/[%_\\]/g, "\\$&")
+    : undefined;
   const year = filters.year;
   const month = filters.month;
   const hasDateFilter = Boolean(year || month);
@@ -712,12 +715,12 @@ export async function getUpcomingEvents(
     query = query.or(monthFilters);
   }
 
-  if (trimmedSearch) {
-    query = query.ilike("name", `%${trimmedSearch}%`);
+  if (escapedSearch) {
+    query = query.ilike("name", `%${escapedSearch}%`);
   }
 
   const { data, error } = await query.limit(
-    trimmedSearch || hasDateFilter ? 200 : limit
+    escapedSearch || hasDateFilter ? 200 : limit
   );
 
   return { data, error: error?.message ?? null };

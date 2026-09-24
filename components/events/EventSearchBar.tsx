@@ -50,7 +50,7 @@ export function EventSearchBar({ filters, availableYears }: EventSearchBarProps)
       const current = filtersRef.current;
       if (searchTerm.trim() === current.search.trim()) return;
       pushFilters({ ...current, search: searchTerm }, pathnameRef.current);
-    }, 300);
+    }, 400);
 
     return () => clearTimeout(timeout);
   }, [searchTerm, router]);

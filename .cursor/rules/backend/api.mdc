@@ -1,0 +1,15 @@
+---
+description: Quy ước viết API route / server action
+globs: "app/api/**/*,pages/api/**/*,**/actions.ts"
+alwaysApply: false
+---
+
+# API routes & server actions
+
+- File server action: `'use server'` ở đầu file. Validate input bằng zod trước khi ghi DB.
+- Return thống nhất: `{ data, error }` hoặc `{ success: true, message }` / `{ error: string }` — khớp file action hiện có, không mix shape mới trong cùng module.
+- Response/action không trả `error.stack` hay object Error thô. Log server: `console.error("[actionName]", { message, userId?, extra })`.
+- Auth: gọi `requireAdmin()` cho thao tác admin; thao tác user dùng `supabase.auth.getUser()` rồi mới insert/update.
+- `revalidatePath` các route public + admin liên quan sau mutate.
+
+<!-- TODO: Glob `**/actions.ts` không khớp `app/actions/eventActions.ts`. Cân nhắc đổi thành `app/actions/**/*.ts`. -->

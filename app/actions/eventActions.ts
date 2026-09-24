@@ -75,7 +75,9 @@ export async function getEvents(): Promise<Event[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("*")
+    .select(
+      "id, name, description, location, event_date, registration_deadline, event_link, participant_count, image_url, deleted_at"
+    )
     .order("event_date", { ascending: false });
 
   if (error) return [];

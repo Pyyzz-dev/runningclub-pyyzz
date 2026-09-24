@@ -1,0 +1,15 @@
+---
+description: Quy ước chung cho stack Supabase + Vercel
+globs: "**/*"
+alwaysApply: true
+---
+
+# Stack (Next.js + Supabase + Vercel)
+
+- TypeScript strict: không thêm `any`. Dùng `unknown` rồi narrow, hoặc type từ `lib/supabase/types.ts`.
+- Secret và URL chỉ lấy từ env. Không hardcode Supabase URL, anon key, service role, SMTP password.
+- Biến public phải có prefix `NEXT_PUBLIC_` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Key `service_role` không bao giờ prefix `NEXT_PUBLIC_`.
+- Env mới: khai báo trong `.env.local` rồi thêm cùng tên trên Vercel (Development / Preview / Production).
+- Đổi schema Postgres: luôn thêm file trong `supabase/migrations/` (timestamp do CLI tạo). Không sửa schema production bằng tay rồi bỏ qua migration.
+- Client: `createClient()` từ `lib/supabase/server.ts` ở Server Component / Server Action; `lib/supabase/client.ts` chỉ ở `'use client'`.
+- Generate types sau migration: `npm run gen:types`.

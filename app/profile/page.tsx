@@ -3,6 +3,7 @@ import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { ChangePasswordForm } from "@/components/forms/ChangePasswordForm";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { AvatarUploader } from "@/components/profile/AvatarUploader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,21 @@ async function ProfileContent() {
           className="mb-8"
         />
 
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Ảnh đại diện</CardTitle>
+              <CardDescription>Ảnh này hiển thị trên hồ sơ và menu tài khoản</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AvatarUploader
+                userId={user.id}
+                currentAvatar={user.avatar_url}
+                fullName={user.full_name}
+              />
+            </CardContent>
+          </Card>
+
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
@@ -102,6 +118,7 @@ async function ProfileContent() {
               <ChangePasswordForm />
             </CardContent>
           </Card>
+        </div>
         </div>
     </Section>
   );

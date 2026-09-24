@@ -1,0 +1,13 @@
+---
+description: Quy ước git
+globs: "**/*"
+alwaysApply: false
+---
+
+# Git
+
+- Message: Conventional Commits — `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`. Tiếng Việt hoặc tiếng Anh, một câu, nói lý do.
+- Không commit trực tiếp lên `main` khi đang làm feature; nhánh `feat/...` hoặc `fix/...`.
+- Một PR / một mục đích. Không gộp migration DB với refactor UI không liên quan.
+- Trước merge: rebase/sync với `main`. Tránh merge commit rác nếu conflict nhỏ.
+- Agent: chỉ `git commit` khi user yêu cầu. Không `--no-verify`, không force push `main`.

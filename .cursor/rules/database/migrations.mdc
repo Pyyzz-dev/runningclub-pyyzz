@@ -1,0 +1,13 @@
+---
+description: Quy ước viết migration
+globs: "supabase/migrations/**/*"
+alwaysApply: false
+---
+
+# Migrations
+
+- Tạo file bằng Supabase CLI (`supabase migration new ...`) — giữ prefix timestamp. Không đổi tên file đã từng apply.
+- Migration đã chạy trên production: không edit. Sửa bằng migration mới (`019_...` sau `018_...`).
+- Ưu tiên idempotent: `IF NOT EXISTS`, `DROP POLICY IF EXISTS` trước `CREATE POLICY`, `CREATE OR REPLACE FUNCTION`.
+- Cuối file: comment rollback, ví dụ `-- rollback: DROP TABLE IF EXISTS public.event_participants;`
+- RLS + GRANT ngay trong cùng migration khi tạo bảng/RPC mới.
