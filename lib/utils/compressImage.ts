@@ -44,7 +44,7 @@ export async function compressImage(
         const canvas = document.createElement("canvas");
         let sourceX = 0;
         let sourceY = 0;
-        let sourceSize = Math.min(img.width, img.height);
+        const sourceSize = Math.min(img.width, img.height);
         let width = img.width;
         let height = img.height;
 
