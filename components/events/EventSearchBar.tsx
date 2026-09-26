@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface EventFilters {
   search: string;
@@ -40,10 +40,13 @@ export function EventSearchBar({ filters, availableYears }: EventSearchBarProps)
     setSearchTerm(filters.search);
   }, [filters.search]);
 
-  const pushFilters = (next: EventFilters, targetPath = pathname) => {
-    const query = buildEventsQuery(next);
-    router.replace(query ? `${targetPath}?${query}` : targetPath);
-  };
+  const pushFilters = useCallback(
+    (next: EventFilters, targetPath = pathname) => {
+      const query = buildEventsQuery(next);
+      router.replace(query ? `${targetPath}?${query}` : targetPath);
+    },
+    [pathname, router]
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -53,7 +56,7 @@ export function EventSearchBar({ filters, availableYears }: EventSearchBarProps)
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [searchTerm, router]);
+  }, [searchTerm, pushFilters]);
 
   const hasFilters = Boolean(searchTerm.trim() || filters.year || filters.month);
 

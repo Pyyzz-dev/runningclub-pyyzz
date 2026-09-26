@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useEffect } from "react";
 
 interface ErrorPageProps {
@@ -24,7 +25,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           Thử lại
         </Button>
         <Button asChild variant="outline">
-          <a href="/">Về trang chủ</a>
+          <Link href="/">Về trang chủ</Link>
         </Button>
       </div>
     </div>
