@@ -56,21 +56,26 @@ export function LoginForm({
   });
 
   const onSubmit = async (values: LoginFormValues) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password,
+      });
 
-    if (error) {
-      toast.error(getLoginErrorMessage(error.message));
-      return;
+      if (error) {
+        toast.error(getLoginErrorMessage(error.message));
+        return;
+      }
+
+      await refreshUser();
+      toast.success("Đăng nhập thành công!");
+      onSuccess?.();
+      router.push(redirectTo || "/");
+      router.refresh();
+    } catch (error) {
+      console.error("[LoginForm]", error);
+      toast.error("Không thể kết nối máy chủ. Vui lòng thử lại.");
     }
-
-    await refreshUser();
-    toast.success("Đăng nhập thành công!");
-    onSuccess?.();
-    router.push(redirectTo || "/");
-    router.refresh();
   };
 
   return (

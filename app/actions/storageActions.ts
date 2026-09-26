@@ -34,51 +34,59 @@ function resolveUploadPath(folder: string, fileName: string): string {
 }
 
 export async function uploadImage(formData: FormData) {
-  const folder = getFolderFromForm(formData);
-  const isCommentUpload = folder === "history-comments";
+  try {
+    const folder = getFolderFromForm(formData);
+    const isCommentUpload = folder === "history-comments";
 
-  if (isCommentUpload) {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return { success: false as const, error: "Vui lòng đăng nhập để tải ảnh" };
+    if (isCommentUpload) {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        return { success: false as const, error: "Vui lòng đăng nhập để tải ảnh" };
+      }
+    } else {
+      try {
+        await requireAdmin();
+      } catch (e) {
+        return {
+          success: false as const,
+          error: e instanceof Error ? e.message : "Không có quyền",
+        };
+      }
     }
-  } else {
-    try {
-      await requireAdmin();
-    } catch (e) {
-      return {
-        success: false as const,
-        error: e instanceof Error ? e.message : "Không có quyền",
-      };
+
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) {
+      return { success: false as const, error: "File không hợp lệ" };
     }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return { success: false as const, error: "Chỉ hỗ trợ ảnh JPG, PNG, WEBP, GIF" };
+    }
+
+    if (file.size > MAX_SIZE_BYTES) {
+      return { success: false as const, error: "Ảnh không được vượt quá 10MB" };
+    }
+
+    const path = resolveUploadPath(folder, generateSafeFileName(file.name));
+    const supabase = isCommentUpload ? createAdminClient() : await createClient();
+    const { error: uploadError } = await supabase.storage
+      .from(STORAGE_BUCKET_NAME)
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+
+    if (uploadError) {
+      return { success: false as const, error: uploadError.message };
+    }
+
+    const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(path);
+    return { success: true as const, url: data.publicUrl };
+  } catch (error) {
+    console.error("[uploadImage]", error);
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : "Upload ảnh thất bại",
+    };
   }
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { success: false as const, error: "File không hợp lệ" };
-  }
-
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return { success: false as const, error: "Chỉ hỗ trợ ảnh JPG, PNG, WEBP, GIF" };
-  }
-
-  if (file.size > MAX_SIZE_BYTES) {
-    return { success: false as const, error: "Ảnh không được vượt quá 10MB" };
-  }
-
-  const path = resolveUploadPath(folder, generateSafeFileName(file.name));
-  const supabase = isCommentUpload ? createAdminClient() : await createClient();
-  const { error: uploadError } = await supabase.storage
-    .from(STORAGE_BUCKET_NAME)
-    .upload(path, file, { cacheControl: "3600", upsert: false });
-
-  if (uploadError) {
-    return { success: false as const, error: uploadError.message };
-  }
-
-  const { data } = supabase.storage.from(STORAGE_BUCKET_NAME).getPublicUrl(path);
-  return { success: true as const, url: data.publicUrl };
 }

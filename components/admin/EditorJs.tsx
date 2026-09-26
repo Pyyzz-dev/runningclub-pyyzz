@@ -60,21 +60,27 @@ export function EditorJs({
             config: {
               uploader: {
                 async uploadByFile(file: File) {
-                  let fileToUpload = file;
                   try {
-                    fileToUpload = await compressImage(file);
-                  } catch (compressError) {
-                    console.warn("Nén ảnh thất bại, upload ảnh gốc:", compressError);
-                  }
+                    let fileToUpload = file;
+                    try {
+                      fileToUpload = await compressImage(file);
+                    } catch (compressError) {
+                      console.warn("Nén ảnh thất bại, upload ảnh gốc:", compressError);
+                    }
 
-                  const formData = new FormData();
-                  formData.append("file", fileToUpload);
-                  formData.append("folder", imageFolder);
-                  const result = await uploadImage(formData);
-                  if (!result.success) {
+                    const formData = new FormData();
+                    formData.append("file", fileToUpload);
+                    formData.append("folder", imageFolder);
+                    const result = await uploadImage(formData);
+                    if (!result.success) {
+                      console.error("[EditorJs upload]", result.error);
+                      return { success: 0 };
+                    }
+                    return { success: 1, file: { url: result.url } };
+                  } catch (error) {
+                    console.error("[EditorJs upload]", error);
                     return { success: 0 };
                   }
-                  return { success: 1, file: { url: result.url } };
                 },
               },
             },
@@ -87,9 +93,13 @@ export function EditorJs({
         },
         data: parseEditorValue(initialValueRef.current),
         onChange: async () => {
-          if (!editorRef.current) return;
-          const content = await editorRef.current.save();
-          onChangeRef.current(JSON.stringify(content));
+          try {
+            if (!editorRef.current) return;
+            const content = await editorRef.current.save();
+            onChangeRef.current(JSON.stringify(content));
+          } catch (error) {
+            console.error("[EditorJs onChange]", error);
+          }
         },
       });
 
@@ -102,7 +112,9 @@ export function EditorJs({
       }
     };
 
-    void init();
+    void init().catch((error) => {
+      console.error("[EditorJs init]", error);
+    });
 
     return () => {
       isMounted = false;

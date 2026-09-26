@@ -35,9 +35,15 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    const { data } = await fetchCurrentUser();
-    setUser(data ?? null);
-    return data ?? null;
+    try {
+      const { data } = await fetchCurrentUser();
+      setUser(data ?? null);
+      return data ?? null;
+    } catch (error) {
+      console.error("[AuthProvider.refreshUser]", error);
+      setUser(null);
+      return null;
+    }
   }, []);
 
   useEffect(() => {
@@ -48,19 +54,28 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     let mounted = true;
 
     async function syncSession() {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user: authUser },
+        } = await supabase.auth.getUser();
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (authUser) {
-        await refreshUser();
-      } else {
-        setUser(null);
+        if (authUser) {
+          await refreshUser();
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error("[AuthProvider.syncSession]", error);
+        if (mounted) {
+          setUser(null);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-
-      setIsLoading(false);
     }
 
     syncSession();
@@ -70,19 +85,23 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     } = supabase.auth.onAuthStateChange(async (event) => {
       if (!mounted) return;
 
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-        router.refresh();
-        return;
-      }
+      try {
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          router.refresh();
+          return;
+        }
 
-      if (
-        event === "SIGNED_IN" ||
-        event === "TOKEN_REFRESHED" ||
-        event === "USER_UPDATED"
-      ) {
-        await refreshUser();
-        router.refresh();
+        if (
+          event === "SIGNED_IN" ||
+          event === "TOKEN_REFRESHED" ||
+          event === "USER_UPDATED"
+        ) {
+          await refreshUser();
+          router.refresh();
+        }
+      } catch (error) {
+        console.error("[AuthProvider.onAuthStateChange]", error);
       }
     });
 

@@ -24,7 +24,12 @@ import type { LeaderboardPeriodType } from "@/lib/supabase/types";
 import { getUserTrainingRegistrations } from "@/app/actions/trainingParticipantActions";
 
 export async function fetchCurrentUser() {
-  return getCurrentUser();
+  try {
+    return await getCurrentUser();
+  } catch (error) {
+    console.error("[fetchCurrentUser]", error);
+    return { data: null, error: "Không thể tải thông tin người dùng" };
+  }
 }
 
 export async function fetchAllPosts(viewerIsAdmin = false) {

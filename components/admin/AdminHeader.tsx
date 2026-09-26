@@ -36,18 +36,23 @@ export function AdminHeader() {
     : "AD";
 
   const handleLogout = async () => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signOut();
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
 
-    if (error) {
-      toast.error(error.message);
-      return;
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      setUser(null);
+      toast.success("Đã đăng xuất");
+      router.refresh();
+      router.replace("/login");
+    } catch (error) {
+      console.error("[AdminHeader.logout]", error);
+      toast.error("Không thể đăng xuất. Vui lòng thử lại.");
     }
-
-    setUser(null);
-    toast.success("Đã đăng xuất");
-    router.refresh();
-    router.replace("/login");
   };
 
   return (

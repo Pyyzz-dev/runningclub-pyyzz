@@ -35,18 +35,23 @@ export function HeaderAuthActions() {
 
   const handleLogout = () => {
     startTransition(async () => {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signOut();
+      try {
+        const supabase = createClient();
+        const { error } = await supabase.auth.signOut();
 
-      if (error) {
-        toast.error(error.message);
-        return;
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
+
+        setUser(null);
+        toast.success("Đã đăng xuất");
+        router.refresh();
+        router.push("/");
+      } catch (error) {
+        console.error("[HeaderAuthActions.logout]", error);
+        toast.error("Không thể đăng xuất. Vui lòng thử lại.");
       }
-
-      setUser(null);
-      toast.success("Đã đăng xuất");
-      router.refresh();
-      router.push("/");
     });
   };
 

@@ -27,11 +27,16 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Không chèn code giữa createServerClient và getUser — có thể gây mất session.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  return { supabaseResponse, user, supabase };
+    return { supabaseResponse, user, supabase };
+  } catch (error) {
+    console.error("[updateSession]", error);
+    return { supabaseResponse, user: null, supabase };
+  }
 }
 
 /** Giữ cookie session khi redirect (bắt buộc theo Supabase SSR). */

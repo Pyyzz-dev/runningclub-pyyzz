@@ -62,17 +62,23 @@ export function ImageUploader({
     formData.append("file", fileToUpload);
     formData.append("folder", folder);
 
-    const result = await uploadImage(formData);
-    setUploading(false);
+    try {
+      const result = await uploadImage(formData);
+      if (!result.success) {
+        toast.error(`Upload ảnh thất bại: ${result.error}`);
+        return;
+      }
 
-    if (!result.success) {
-      toast.error(`Upload ảnh thất bại: ${result.error}`);
-      return;
+      setPreview(result.url);
+      onImageUploaded(result.url);
+      toast.success("Upload ảnh thành công");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload ảnh thất bại";
+      console.error("[ImageUploader]", error);
+      toast.error(message);
+    } finally {
+      setUploading(false);
     }
-
-    setPreview(result.url);
-    onImageUploaded(result.url);
-    toast.success("Upload ảnh thành công");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
