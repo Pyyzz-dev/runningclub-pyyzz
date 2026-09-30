@@ -1,6 +1,10 @@
 "use client";
 
 import { createPost, updatePost } from "@/app/actions/postActions";
+import {
+  AIGeneratePostDialog,
+  type GeneratedPostDraft,
+} from "@/components/admin/AIGeneratePostDialog";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { EditorJsLazy as EditorJs } from "@/components/admin/EditorJsLazy";
 import { isEmptyEditorContent } from "@/lib/utils/editorjs";
@@ -8,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -22,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PostWithAuthorEmail } from "@/lib/supabase/types";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -44,6 +49,8 @@ export function PostFormDialog({
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [editorNonce, setEditorNonce] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -51,8 +58,16 @@ export function PostFormDialog({
       setContent(post?.content ?? "");
       setStatus(post?.status ?? "draft");
       setCoverImageUrl(post?.cover_image_url ?? "");
+      setEditorNonce(0);
+      setAiDialogOpen(false);
     }
   }, [open, post]);
+
+  const handleAIGenerated = (data: GeneratedPostDraft) => {
+    setTitle(data.title);
+    setContent(data.content);
+    setEditorNonce((n) => n + 1);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,15 +104,37 @@ export function PostFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && aiDialogOpen) return;
+          onOpenChange(nextOpen);
+        }}
+      >
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {post ? "Chỉnh sửa bài viết" : "Viết bài mới"}
           </DialogTitle>
+          <DialogDescription>
+            Điền thông tin bài viết hoặc tạo tự động từ link.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setAiDialogOpen(true)}
+              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Tạo từ link bằng AI
+            </Button>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="post-title">Tiêu đề</Label>
             <Input
@@ -128,7 +165,7 @@ export function PostFormDialog({
           <div className="space-y-2">
             <Label>Nội dung</Label>
             <EditorJs
-              key={`${open}-${post?.id ?? "new"}`}
+              key={`${open}-${post?.id ?? "new"}-${editorNonce}`}
               value={content}
               onChange={setContent}
               placeholder="Viết nội dung bài viết..."
@@ -168,5 +205,12 @@ export function PostFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+
+    <AIGeneratePostDialog
+      open={aiDialogOpen}
+      onOpenChange={setAiDialogOpen}
+      onGenerated={handleAIGenerated}
+    />
+    </>
   );
 }

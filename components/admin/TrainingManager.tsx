@@ -40,8 +40,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { TrainingSchedule } from "@/lib/supabase/types";
-import { formatDateTime } from "@/lib/format";
-import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
+import { QuerySearchInput } from "@/components/common/QuerySearchInput";
+import { useQueryFilters } from "@/lib/hooks/useQueryFilters";
+import { formatVietnamDateTime } from "@/lib/utils/timezone";
 import { cn } from "@/lib/utils";
 import {
   getTrainingStatus,
@@ -49,25 +50,28 @@ import {
   getTrainingStatusText,
   type TrainingStatus,
 } from "@/lib/utils/trainingStatus";
-import { Calendar, CalendarPlus, Edit, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { Calendar, CalendarPlus, Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface TrainingManagerProps {
   trainings: TrainingSchedule[];
+  search: string;
+  month: string;
+  status: "all" | TrainingStatus;
   className?: string;
 }
 
 export function TrainingManager({
-  trainings: initialTrainings,
+  trainings,
+  search,
+  month,
+  status,
   className,
 }: TrainingManagerProps) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 400);
-  const [monthFilter, setMonthFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | TrainingStatus>("all");
+  const { setFilters } = useQueryFilters();
   const [formOpen, setFormOpen] = useState(false);
   const [editTraining, setEditTraining] = useState<TrainingSchedule | null>(
     null
@@ -81,25 +85,6 @@ export function TrainingManager({
     const interval = setInterval(() => setStatusTick((t) => t + 1), 60_000);
     return () => clearInterval(interval);
   }, []);
-
-  const filtered = useMemo(() => {
-    return initialTrainings.filter((t) => {
-      const matchesSearch =
-        !debouncedSearch ||
-        t.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-        (t.location?.toLowerCase().includes(debouncedSearch.toLowerCase()) ?? false);
-
-      const matchesMonth =
-        !monthFilter ||
-        t.start_time.startsWith(monthFilter);
-
-      const matchesStatus =
-        statusFilter === "all" ||
-        getTrainingStatus(t.start_time, t.end_time) === statusFilter;
-
-      return matchesSearch && matchesMonth && matchesStatus;
-    });
-  }, [initialTrainings, debouncedSearch, monthFilter, statusFilter]);
 
   const handleSubmit = async (formData: FormData) => {
     if (editTraining) {
@@ -160,25 +145,23 @@ export function TrainingManager({
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative max-w-xs flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm kiếm buổi tập..."
-              className="pl-9"
-            />
-          </div>
+          <QuerySearchInput
+            value={search}
+            placeholder="Tìm kiếm buổi tập..."
+            className="max-w-xs"
+          />
           <Input
             type="month"
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
+            value={month}
+            onChange={(e) => setFilters({ month: e.target.value || null })}
             className="max-w-[180px]"
             aria-label="Lọc theo tháng"
           />
           <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as "all" | TrainingStatus)}
+            value={status}
+            onValueChange={(value) =>
+              setFilters({ status: value === "all" ? null : value })
+            }
           >
             <SelectTrigger className="w-[160px]" aria-label="Lọc theo trạng thái">
               <SelectValue placeholder="Trạng thái" />
@@ -243,7 +226,7 @@ export function TrainingManager({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {trainings.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -253,8 +236,8 @@ export function TrainingManager({
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((training) => {
-                const status = getTrainingStatus(training.start_time, training.end_time);
+              trainings.map((training) => {
+                const trainingStatus = getTrainingStatus(training.start_time, training.end_time);
 
                 return (
                 <TableRow
@@ -269,10 +252,10 @@ export function TrainingManager({
                   </TableCell>
                   <TableCell>{training.location}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(training.start_time)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDateTime(training.end_time)}
+                {formatVietnamDateTime(training.start_time)}
+              </TableCell>
+              <TableCell className="text-sm text-muted-foreground">
+                {formatVietnamDateTime(training.end_time)}
                   </TableCell>
                   <TableCell className="text-sm">
                     {training.participant_count ?? 0}
@@ -281,10 +264,10 @@ export function TrainingManager({
                     <span
                       className={cn(
                         "inline-flex rounded-full px-2 py-1 text-xs font-medium",
-                        getTrainingStatusColor(status)
+                        getTrainingStatusColor(trainingStatus)
                       )}
                     >
-                      {getTrainingStatusText(status)}
+                      {getTrainingStatusText(trainingStatus)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

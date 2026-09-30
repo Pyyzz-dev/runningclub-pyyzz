@@ -6,6 +6,7 @@ import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { LeaderboardNote } from "@/components/modules/LeaderboardNote";
 import { LeaderboardTableWithRefresh } from "@/components/modules/LeaderboardTableWithRefresh";
+import { parsePageParam } from "@/lib/utils/pagination";
 
 export const metadata: Metadata = {
   title: "Bảng xếp hạng",
@@ -13,7 +14,15 @@ export const metadata: Metadata = {
 
 export const revalidate = 600;
 
-export default async function LeaderboardPage() {
+type LeaderboardPageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function LeaderboardPage({
+  searchParams,
+}: LeaderboardPageProps) {
+  const { page } = await searchParams;
+  const currentPage = parsePageParam(page);
   const [{ data: leaderboardData, error }, { data: user }] = await Promise.all([
     getLeaderboardFromSheetWithError(),
     fetchCurrentUser(),
@@ -38,6 +47,7 @@ export default async function LeaderboardPage() {
               <LeaderboardTableWithRefresh
                 initialData={leaderboardData ?? []}
                 currentMemberName={user?.full_name}
+                initialPage={currentPage}
               />
             )}
           </div>

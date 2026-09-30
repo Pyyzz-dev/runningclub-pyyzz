@@ -36,76 +36,144 @@ function getListItemHtml(item: unknown): string {
 }
 
 export function parseEditorJsContent(data: string): string {
+  const raw =
+    typeof data === "string"
+      ? data
+      : data == null
+        ? ""
+        : JSON.stringify(data);
+  const trimmed = raw.trim().replace(/^\uFEFF/, "");
+  if (!trimmed) return "";
+
+  if (trimmed.startsWith("<")) {
+    return cleanHtmlContent(trimmed);
+  }
+
   try {
-    const json = JSON.parse(data) as EditorJsOutput;
-    if (!Array.isArray(json.blocks)) return data;
+    const parsed: unknown = JSON.parse(trimmed);
+    const json = typeof parsed === "string" ? (JSON.parse(parsed) as unknown) : parsed;
+    if (!isEditorJsOutput(json)) return trimmed;
 
     return json.blocks
-      .map((block) => {
-        switch (block.type) {
-          case "header": {
-            const level = Number(block.data.level) || 2;
-            const text = String(block.data.text ?? "");
-            return `<h${level}>${text}</h${level}>`;
-          }
-          case "paragraph":
-            return `<p>${String(block.data.text ?? "")}</p>`;
-          case "list": {
-            const items = Array.isArray(block.data.items)
-              ? block.data.items.map(getListItemHtml).join("")
-              : "";
-            return block.data.style === "ordered"
-              ? `<ol>${items}</ol>`
-              : `<ul>${items}</ul>`;
-          }
-          case "image": {
-            const file = block.data.file as { url?: string } | undefined;
-            const url = file?.url ?? String(block.data.url ?? "");
-            if (!url) return "";
-            const caption = block.data.caption
-              ? `<figcaption>${String(block.data.caption)}</figcaption>`
-              : "";
-            return `<figure class="my-4"><img src="${url}" alt="" class="max-w-full h-auto rounded-lg" />${caption}</figure>`;
-          }
-          case "quote": {
-            const text = String(block.data.text ?? "");
-            const caption = block.data.caption
-              ? `<cite>${String(block.data.caption)}</cite>`
-              : "";
-            return `<blockquote>${text}${caption}</blockquote>`;
-          }
-          case "embed": {
-            const embed = String(block.data.embed ?? "");
-            if (embed) {
-              return `<div class="my-4 aspect-video overflow-hidden rounded-lg">${embed}</div>`;
-            }
-            const source = String(block.data.source ?? "");
-            return source
-              ? `<p><a href="${source}" target="_blank" rel="noopener noreferrer">${source}</a></p>`
-              : "";
-          }
-          default:
-            return "";
-        }
-      })
+      .map((block) => blockToHtml(block))
       .join("");
   } catch {
-    return data;
+    return trimmed;
+  }
+}
+
+function isEditorJsOutput(value: unknown): value is EditorJsOutput {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Array.isArray((value as EditorJsOutput).blocks)
+  );
+}
+
+function blockToHtml(block: EditorJsBlock): string {
+  const data = block.data ?? {};
+  switch (block.type) {
+    case "header": {
+      const level = Number(data.level) || 2;
+      const text = String(data.text ?? "");
+      return `<h${level}>${text}</h${level}>`;
+    }
+    case "paragraph":
+      return `<p>${String(data.text ?? "")}</p>`;
+    case "list": {
+      const items = Array.isArray(data.items)
+        ? data.items.map(getListItemHtml).join("")
+        : "";
+      return data.style === "ordered" ? `<ol>${items}</ol>` : `<ul>${items}</ul>`;
+    }
+    case "image": {
+      const file = data.file as { url?: string } | undefined;
+      const url = file?.url ?? String(data.url ?? "");
+      if (!url) return "";
+      const caption = data.caption
+        ? `<figcaption>${String(data.caption)}</figcaption>`
+        : "";
+      return `<figure class="my-4"><img src="${url}" alt="" class="max-w-full h-auto rounded-lg" />${caption}</figure>`;
+    }
+    case "quote": {
+      const text = String(data.text ?? "");
+      const caption = data.caption
+        ? `<cite>${String(data.caption)}</cite>`
+        : "";
+      return `<blockquote>${text}${caption}</blockquote>`;
+    }
+    case "embed": {
+      const embed = String(data.embed ?? "");
+      if (embed) {
+        return `<div class="my-4 aspect-video overflow-hidden rounded-lg">${embed}</div>`;
+      }
+      const source = String(data.source ?? "");
+      return source
+        ? `<p><a href="${source}" target="_blank" rel="noopener noreferrer">${source}</a></p>`
+        : "";
+    }
+    default:
+      return "";
+  }
+}
+
+export function getPostExcerpt(content: string, maxLength = 120): string {
+  const html = parseEditorJsContent(content);
+  const fromHtml = html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (fromHtml && !fromHtml.startsWith("{") && !fromHtml.includes('"blocks"')) {
+    return fromHtml.length <= maxLength
+      ? fromHtml
+      : `${fromHtml.slice(0, maxLength).trim()}...`;
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(
+      typeof content === "string" ? content : JSON.stringify(content ?? "")
+    );
+    if (!isEditorJsOutput(parsed)) {
+      return fromHtml.slice(0, maxLength);
+    }
+    const parts: string[] = [];
+    for (const block of parsed.blocks) {
+      const data = block.data ?? {};
+      if (typeof data.text === "string" && data.text.trim()) {
+        parts.push(data.text.replace(/<[^>]*>/g, " ").trim());
+      }
+      if (Array.isArray(data.items)) {
+        for (const item of data.items) {
+          if (typeof item === "string") parts.push(item);
+          if (item && typeof item === "object" && "content" in item) {
+            parts.push(String((item as { content: string }).content));
+          }
+        }
+      }
+    }
+    const joined = parts.join(" ").replace(/\s+/g, " ").trim();
+    if (!joined) return fromHtml.slice(0, maxLength);
+    return joined.length <= maxLength
+      ? joined
+      : `${joined.slice(0, maxLength).trim()}...`;
+  } catch {
+    return fromHtml.slice(0, maxLength);
   }
 }
 
 export function renderEditorContent(content: string): string {
   if (!content?.trim()) return "";
-  if (isEditorJsContent(content)) {
-    return parseEditorJsContent(content);
-  }
-  return cleanHtmlContent(content);
+  return parseEditorJsContent(content);
 }
 
 export function normalizeContentForSave(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return "";
-  if (isEditorJsContent(trimmed)) return trimmed;
+  if (isEditorJsContent(trimmed)) {
+    return parseEditorJsContent(trimmed);
+  }
   return cleanHtmlContent(trimmed);
 }
 
@@ -150,24 +218,45 @@ export function isEmptyEditorContent(value: string): boolean {
 
 function htmlToEditorBlocks(html: string): EditorJsOutput {
   const blocks: EditorJsBlock[] = [];
-  const blockRegex =
-    /<(h[2-4]|p|blockquote)[^>]*>([\s\S]*?)<\/\1>/gi;
+  const chunkRegex = /<(h[2-4]|p|blockquote|ul|ol)[^>]*>([\s\S]*?)<\/\1>/gi;
   let match: RegExpExecArray | null;
 
-  while ((match = blockRegex.exec(html)) !== null) {
+  while ((match = chunkRegex.exec(html)) !== null) {
     const tag = match[1].toLowerCase();
-    const inner = match[2].replace(/<[^>]+>/g, "").trim();
-    if (!inner) continue;
+    const inner = match[2];
+
+    if (tag === "ul" || tag === "ol") {
+      const items: string[] = [];
+      const liRegex = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+      let liMatch: RegExpExecArray | null;
+      while ((liMatch = liRegex.exec(inner)) !== null) {
+        const text = liMatch[1].replace(/<[^>]+>/g, "").trim();
+        if (text) items.push(text);
+      }
+      if (items.length > 0) {
+        blocks.push({
+          type: "list",
+          data: {
+            style: tag === "ol" ? "ordered" : "unordered",
+            items,
+          },
+        });
+      }
+      continue;
+    }
+
+    const text = inner.replace(/<[^>]+>/g, "").trim();
+    if (!text) continue;
 
     if (tag.startsWith("h")) {
       blocks.push({
         type: "header",
-        data: { text: inner, level: Number(tag[1]) },
+        data: { text, level: Number(tag[1]) },
       });
     } else if (tag === "p") {
-      blocks.push({ type: "paragraph", data: { text: inner } });
+      blocks.push({ type: "paragraph", data: { text } });
     } else if (tag === "blockquote") {
-      blocks.push({ type: "quote", data: { text: inner, caption: "" } });
+      blocks.push({ type: "quote", data: { text, caption: "" } });
     }
   }
 
@@ -179,6 +268,14 @@ function htmlToEditorBlocks(html: string): EditorJsOutput {
   }
 
   return { blocks };
+}
+
+export function htmlToEditorJsJson(html: string): string {
+  return JSON.stringify(
+    htmlToEditorBlocks(
+      html.replace(/<p>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, "").trim()
+    )
+  );
 }
 
 export function parseEditorValue(value: string): EditorJsOutput {

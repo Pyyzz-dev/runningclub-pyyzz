@@ -4,12 +4,15 @@ import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { EventSearchBar } from "@/components/events/EventSearchBar";
 import { EventList } from "@/components/modules/EventList";
+import { Pagination } from "@/components/common/Pagination";
 import {
   fetchCurrentUser,
   fetchEventYears,
-  fetchUpcomingEvents,
+  fetchUpcomingEventsPaginated,
 } from "@/app/actions/dataActions";
 import { getUserEventParticipations } from "@/app/actions/eventParticipantActions";
+import { ITEMS_PER_PAGE, parsePageParam } from "@/lib/utils/pagination";
+import { redirectIfPageOutOfRange } from "@/lib/utils/pagination-redirect";
 
 export const revalidate = 0;
 
@@ -18,7 +21,12 @@ export const metadata: Metadata = {
 };
 
 type EventsPageProps = {
-  searchParams: Promise<{ search?: string; year?: string; month?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    search?: string;
+    year?: string;
+    month?: string;
+  }>;
 };
 
 function parseYear(value?: string) {
@@ -34,14 +42,20 @@ function parseMonth(value?: string) {
 }
 
 export default async function EventsPage({ searchParams }: EventsPageProps) {
-  const { search = "", year = "", month = "" } = await searchParams;
+  const {
+    page,
+    search = "",
+    year = "",
+    month = "",
+  } = await searchParams;
   const trimmedSearch = search.trim();
   const parsedYear = parseYear(year);
   const parsedMonth = parseMonth(month);
   const hasFilters = Boolean(trimmedSearch || parsedYear || parsedMonth);
+  const currentPage = parsePageParam(page);
 
-  const [{ data: events, error }, { data: user }, availableYears] = await Promise.all([
-    fetchUpcomingEvents(50, {
+  const [eventsResult, { data: user }, availableYears] = await Promise.all([
+    fetchUpcomingEventsPaginated(currentPage, {
       search: trimmedSearch || undefined,
       year: parsedYear,
       month: parsedMonth,
@@ -49,6 +63,14 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
     fetchCurrentUser(),
     fetchEventYears(),
   ]);
+
+  redirectIfPageOutOfRange(
+    "/events",
+    { page, search: trimmedSearch || undefined, year, month },
+    currentPage,
+    eventsResult.totalPages,
+    eventsResult.count
+  );
 
   const joinedMap = user ? await getUserEventParticipations(user.id) : {};
 
@@ -67,17 +89,25 @@ export default async function EventsPage({ searchParams }: EventsPageProps) {
           }}
           availableYears={availableYears}
         />
-        {error ? (
-          <p className="text-center text-destructive">{error}</p>
+        {eventsResult.error ? (
+          <p className="text-center text-destructive">{eventsResult.error}</p>
         ) : (
-          <EventList
-            events={events ?? []}
-            userId={user?.id ?? null}
-            joinedMap={joinedMap}
-            enableParticipation
-            searchTerm={trimmedSearch}
-            hasFilters={hasFilters}
-          />
+          <>
+            <EventList
+              events={eventsResult.data}
+              userId={user?.id ?? null}
+              joinedMap={joinedMap}
+              enableParticipation
+              searchTerm={trimmedSearch}
+              hasFilters={hasFilters}
+            />
+            <Pagination
+              currentPage={eventsResult.currentPage}
+              totalPages={eventsResult.totalPages}
+              totalItems={eventsResult.count}
+              itemsPerPage={ITEMS_PER_PAGE}
+            />
+          </>
         )}
       </AuthGuard>
     </Section>

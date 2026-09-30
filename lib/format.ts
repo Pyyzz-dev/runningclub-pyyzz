@@ -1,7 +1,12 @@
 import { formatDistanceToNow, format } from "date-fns";
 import { vi } from "date-fns/locale";
+import {
+  fromVietnamDatetimeLocal,
+  toVietnamDatetimeLocal,
+  VIETNAM_TIMEZONE,
+} from "@/lib/utils/timezone";
 
-const VIETNAM_TZ = "Asia/Ho_Chi_Minh";
+const VIETNAM_TZ = VIETNAM_TIMEZONE;
 
 function formatWithTimeZoneParts(
   date: string | Date,
@@ -59,18 +64,14 @@ export function parseStableDate(date: string | Date): Date {
   return new Date(trimmed);
 }
 
-/** `datetime-local` input value from ISO / DB string (local timezone). */
+/** `datetime-local` input value from ISO / DB string (giờ Việt Nam). */
 export function toDatetimeLocal(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = parseStableDate(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return toVietnamDatetimeLocal(iso);
 }
 
-/** ISO string for DB storage from `datetime-local` or parseable datetime. */
+/** ISO UTC để lưu DB, hiểu `datetime-local` là giờ Việt Nam. */
 export function fromDatetimeLocal(value: string): string {
-  if (!value) return "";
-  return new Date(value).toISOString();
+  return fromVietnamDatetimeLocal(value);
 }
 
 export function toIsoDateTime(value: string): string {
@@ -78,6 +79,13 @@ export function toIsoDateTime(value: string): string {
   const trimmed = value.trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
     return `${trimmed}T00:00:00.000+07:00`;
+  }
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed) &&
+    !/[zZ]$/.test(trimmed) &&
+    !/[+-]\d{2}:\d{2}$/.test(trimmed)
+  ) {
+    return fromVietnamDatetimeLocal(trimmed);
   }
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(trimmed) && trimmed.endsWith("Z")) {
     return trimmed;

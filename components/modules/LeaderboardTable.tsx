@@ -9,15 +9,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/common/Pagination";
 import type { LeaderboardEntry } from "@/lib/types/leaderboard";
+import { ITEMS_PER_PAGE, slicePage } from "@/lib/utils/pagination";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Medal, Trophy } from "lucide-react";
+import { Medal, Trophy } from "lucide-react";
 
 interface LeaderboardTableProps {
   data: LeaderboardEntry[];
   currentMemberName?: string | null;
   itemsPerPage?: number;
+  initialPage?: number;
   className?: string;
 }
 
@@ -37,25 +39,22 @@ function getMedalIcon(rank: number) {
 export function LeaderboardTable({
   data,
   currentMemberName,
-  itemsPerPage = 10,
+  itemsPerPage = ITEMS_PER_PAGE,
+  initialPage = 1,
   className,
 }: LeaderboardTableProps) {
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initialPage);
 
-  const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-
-  const currentData = useMemo(
-    () => data.slice(startIndex, endIndex),
-    [data, startIndex, endIndex]
+  const { items, totalPages, totalItems } = useMemo(
+    () => slicePage(data, currentPage, itemsPerPage),
+    [data, currentPage, itemsPerPage]
   );
 
   const normalizedCurrentName = currentMemberName?.trim().toLowerCase();
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [data]);
+    setCurrentPage(initialPage);
+  }, [initialPage]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -66,6 +65,16 @@ export function LeaderboardTable({
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const params = new URLSearchParams(window.location.search);
+    if (page <= 1) params.delete("page");
+    else params.set("page", String(page));
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      query ? `${window.location.pathname}?${query}` : window.location.pathname
+    );
   };
 
   if (data.length === 0) {
@@ -75,13 +84,6 @@ export function LeaderboardTable({
       </div>
     );
   }
-
-  const pageNumbers = Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-    if (totalPages <= 5) return i + 1;
-    if (currentPage <= 3) return i + 1;
-    if (currentPage >= totalPages - 2) return totalPages - 4 + i;
-    return currentPage - 2 + i;
-  });
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -104,7 +106,7 @@ export function LeaderboardTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentData.map((entry) => {
+            {items.map((entry) => {
               const isCurrentUser =
                 normalizedCurrentName &&
                 entry.memberName.trim().toLowerCase() === normalizedCurrentName;
@@ -139,54 +141,13 @@ export function LeaderboardTable({
         </Table>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-          <p className="text-sm text-muted-foreground">
-            Hiển thị <strong>{startIndex + 1}</strong> –{" "}
-            <strong>{Math.min(endIndex, data.length)}</strong> /{" "}
-            <strong>{data.length}</strong> thành viên
-          </p>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="h-8 px-3"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span className="ml-1 hidden sm:inline">Trước</span>
-            </Button>
-
-            {pageNumbers.map((pageNum) => (
-              <Button
-                key={pageNum}
-                variant={currentPage === pageNum ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePageChange(pageNum)}
-                className={cn(
-                  "h-8 w-8",
-                  currentPage === pageNum && "bg-blue-600 hover:bg-blue-700"
-                )}
-              >
-                {pageNum}
-              </Button>
-            ))}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="h-8 px-3"
-            >
-              <span className="mr-1 hidden sm:inline">Sau</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Pagination
+        currentPage={Math.min(currentPage, totalPages)}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+      />
     </div>
   );
 }

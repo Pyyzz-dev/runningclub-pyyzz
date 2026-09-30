@@ -68,7 +68,7 @@ export function TrainingFormDialog({
       setError("Thời gian kết thúc không hợp lệ");
       return;
     }
-    if (new Date(endTime) <= new Date(startTime)) {
+    if (new Date(fromDatetimeLocal(endTime)) <= new Date(fromDatetimeLocal(startTime))) {
       setError("Thời gian kết thúc phải sau thời gian bắt đầu");
       return;
     }

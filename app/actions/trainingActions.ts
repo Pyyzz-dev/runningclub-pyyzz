@@ -5,7 +5,17 @@ import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { toIsoDateTime } from "@/lib/format";
+import { createVietnamDate } from "@/lib/utils/timezone";
 import { restore, softDelete } from "@/lib/utils/softDelete";
+import {
+  emptyPaginated,
+  escapeIlike,
+  getPaginationRange,
+  isUnsatisfiableRangeError,
+  toPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/utils/pagination";
+import type { TrainingStatus } from "@/lib/utils/trainingStatus";
 
 type ActionResult<T = undefined> =
   | { data: T; error?: undefined }
@@ -24,17 +34,72 @@ function parseTrainingForm(formData: FormData) {
   };
 }
 
-export async function getTrainings(): Promise<TrainingSchedule[]> {
+export type AdminTrainingListFilters = {
+  page?: number;
+  search?: string;
+  month?: string;
+  status?: "all" | TrainingStatus;
+};
+
+function monthStartEnd(monthValue: string): { start: string; end: string } | null {
+  const match = /^(\d{4})-(\d{2})$/.exec(monthValue);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+
+  const start = createVietnamDate(year, month, 1, 0, 0);
+  const nextMonth = month === 12 ? 1 : month + 1;
+  const nextYear = month === 12 ? year + 1 : year;
+  const end = createVietnamDate(nextYear, nextMonth, 1, 0, 0);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+export async function getTrainings(
+  filters: AdminTrainingListFilters = {}
+): Promise<PaginatedResult<TrainingSchedule>> {
+  const page = filters.page ?? 1;
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { from, to, currentPage } = getPaginationRange(page);
+  const trimmed = filters.search?.trim();
+  const escaped = trimmed ? escapeIlike(trimmed) : undefined;
+  const now = new Date().toISOString();
+
+  let query = supabase
     .from("training_schedule")
     .select(
-      "id, title, description, location, start_time, end_time, created_by, deleted_at, participant_count"
+      "id, title, description, location, start_time, end_time, created_by, deleted_at, participant_count",
+      { count: "exact" }
     )
     .order("start_time", { ascending: true });
 
-  if (error) return [];
-  return data ?? [];
+  if (escaped) {
+    query = query.or(`title.ilike.%${escaped}%,location.ilike.%${escaped}%`);
+  }
+
+  const monthRange = filters.month ? monthStartEnd(filters.month) : null;
+  if (monthRange) {
+    query = query.gte("start_time", monthRange.start).lt("start_time", monthRange.end);
+  }
+
+  if (filters.status === "upcoming") {
+    query = query.gt("start_time", now);
+  } else if (filters.status === "ongoing") {
+    query = query.lte("start_time", now).gte("end_time", now);
+  } else if (filters.status === "completed") {
+    query = query.lt("end_time", now);
+  }
+
+  const { data, error, count } = await query.range(from, to);
+  if (error) {
+    if (isUnsatisfiableRangeError(error)) {
+      return toPaginatedResult([], 0, currentPage, null);
+    }
+    return emptyPaginated(currentPage, error.message);
+  }
+
+  return toPaginatedResult(data, count, currentPage, null);
 }
 
 export async function createTraining(

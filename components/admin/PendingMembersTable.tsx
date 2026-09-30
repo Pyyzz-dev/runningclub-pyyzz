@@ -25,14 +25,18 @@ import { formatDateTime } from "@/lib/format";
 import type { PendingMember } from "@/lib/supabase/types";
 import { CheckCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface PendingMembersTableProps {
   initialData: PendingMember[];
+  startIndex?: number;
 }
 
-export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
+export function PendingMembersTable({
+  initialData,
+  startIndex = 0,
+}: PendingMembersTableProps) {
   const router = useRouter();
   const [members, setMembers] = useState(initialData);
   const [selectedMember, setSelectedMember] = useState<PendingMember | null>(null);
@@ -40,6 +44,10 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
   const [fullName, setFullName] = useState("");
   const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMembers(initialData);
+  }, [initialData]);
 
   const handleApprove = (member: PendingMember) => {
     setSelectedMember(member);
@@ -99,7 +107,7 @@ export function PendingMembersTable({ initialData }: PendingMembersTableProps) {
           <TableBody>
             {members.map((member, index) => (
               <TableRow key={member.id}>
-                <TableCell>{index + 1}</TableCell>
+                <TableCell>{startIndex + index + 1}</TableCell>
                 <TableCell className="font-medium">{member.full_name}</TableCell>
                 <TableCell>{member.email}</TableCell>
                 <TableCell className="max-w-[150px] truncate" title={member.remarks ?? undefined}>

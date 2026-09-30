@@ -5,6 +5,12 @@ import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { createClient } from "@/lib/supabase/server";
 import type { TrainingSchedule } from "@/lib/supabase/types";
 import { isNotDeleted } from "@/lib/utils/softDelete";
+import {
+  addCalendarDays,
+  createVietnamDate,
+  getNextWednesday,
+  vietnamDayBounds,
+} from "@/lib/utils/timezone";
 
 const DEFAULT_TRAINING = {
   title: "Offline hàng tuần - Chạy cùng CLB",
@@ -14,30 +20,11 @@ const DEFAULT_TRAINING = {
   hour: 18,
   minute: 0,
   durationHours: 1,
-  weekday: 3, // Thứ 4 (0 = Chủ nhật)
 } as const;
 
 type GenerateResult =
   | { success: true; message: string; trainings: TrainingSchedule[] }
   | { error: string };
-
-/** Ngày Thứ 4 gần nhất (tuần hiện tại hoặc tuần sau nếu đã qua giờ tập). */
-function getNextWednesday(fromDate: Date = new Date()): Date {
-  const session = new Date(fromDate);
-  session.setHours(DEFAULT_TRAINING.hour, DEFAULT_TRAINING.minute, 0, 0);
-
-  const currentWeekday = fromDate.getDay();
-  let daysUntilWednesday =
-    (DEFAULT_TRAINING.weekday - currentWeekday + 7) % 7;
-
-  if (daysUntilWednesday === 0 && fromDate >= session) {
-    daysUntilWednesday = 7;
-  }
-
-  session.setDate(fromDate.getDate() + daysUntilWednesday);
-  session.setHours(DEFAULT_TRAINING.hour, DEFAULT_TRAINING.minute, 0, 0);
-  return session;
-}
 
 function revalidateTrainingPaths() {
   revalidatePath("/training");
@@ -59,26 +46,34 @@ export async function generateWeeklyTrainings(weeks = 4): Promise<GenerateResult
   const supabase = await createClient();
   const trainingsCreated: TrainingSchedule[] = [];
 
-  let currentWednesday = getNextWednesday(new Date());
+  let { year, month, day } = getNextWednesday(
+    new Date(),
+    DEFAULT_TRAINING.hour,
+    DEFAULT_TRAINING.minute
+  );
 
   for (let i = 0; i < safeWeeks; i++) {
-    const startTime = new Date(currentWednesday);
-    const endTime = new Date(currentWednesday);
-    endTime.setHours(
-      DEFAULT_TRAINING.hour + DEFAULT_TRAINING.durationHours,
-      DEFAULT_TRAINING.minute,
-      0,
-      0
+    const startTime = createVietnamDate(
+      year,
+      month,
+      day,
+      DEFAULT_TRAINING.hour,
+      DEFAULT_TRAINING.minute
     );
-
-    const dayEnd = new Date(startTime);
-    dayEnd.setHours(23, 59, 59, 999);
+    const endTime = createVietnamDate(
+      year,
+      month,
+      day,
+      DEFAULT_TRAINING.hour + DEFAULT_TRAINING.durationHours,
+      DEFAULT_TRAINING.minute
+    );
+    const { start: dayStart, end: dayEnd } = vietnamDayBounds(year, month, day);
 
     const { data: existing } = await isNotDeleted(
       supabase.from("training_schedule").select("id")
     )
       .eq("title", DEFAULT_TRAINING.title)
-      .gte("start_time", startTime.toISOString())
+      .gte("start_time", dayStart.toISOString())
       .lte("start_time", dayEnd.toISOString())
       .maybeSingle();
 
@@ -105,8 +100,7 @@ export async function generateWeeklyTrainings(weeks = 4): Promise<GenerateResult
       }
     }
 
-    currentWednesday = new Date(currentWednesday);
-    currentWednesday.setDate(currentWednesday.getDate() + 7);
+    ({ year, month, day } = addCalendarDays(year, month, day, 7));
   }
 
   revalidateTrainingPaths();

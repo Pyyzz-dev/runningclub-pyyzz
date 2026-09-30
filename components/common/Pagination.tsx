@@ -1,94 +1,173 @@
 "use client";
 
+import { Suspense, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ITEMS_PER_PAGE, replaceQueryParams } from "@/lib/utils/pagination";
 
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
-  onPageChange: (page: number) => void;
+  totalItems: number;
+  itemsPerPage?: number;
+  onPageChange?: (page: number) => void;
   className?: string;
 }
 
-function getVisiblePages(current: number, total: number): (number | "ellipsis")[] {
-  if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
+function getVisiblePages(current: number, total: number): number[] {
+  const windowSize = Math.min(5, total);
 
-  const pages: (number | "ellipsis")[] = [1];
-
-  if (current > 3) pages.push("ellipsis");
-
-  const start = Math.max(2, current - 1);
-  const end = Math.min(total - 1, current + 1);
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-
-  if (current < total - 2) pages.push("ellipsis");
-
-  pages.push(total);
-  return pages;
+  return Array.from({ length: windowSize }, (_, i) => {
+    if (total <= 5) return i + 1;
+    if (current <= 3) return i + 1;
+    if (current >= total - 2) return total - 4 + i;
+    return current - 2 + i;
+  });
 }
 
-export function Pagination({
+function PaginationControls({
   currentPage,
   totalPages,
+  totalItems,
+  itemsPerPage = ITEMS_PER_PAGE,
   onPageChange,
   className,
 }: PaginationProps) {
-  if (totalPages <= 1) return null;
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
+  if (totalPages <= 1 || totalItems <= 0) return null;
+
+  const buildUrl = (page: number) =>
+    replaceQueryParams(pathname, searchParams, {
+      page: page <= 1 ? null : String(page),
+    });
+
+  const startItem = (currentPage - 1) * itemsPerPage + 1;
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems);
   const pages = getVisiblePages(currentPage, totalPages);
+
+  const goToPage = (page: number, disabled: boolean) => {
+    if (disabled) return;
+    onPageChange?.(page);
+  };
 
   return (
     <nav
       aria-label="Phân trang"
-      className={cn("flex items-center justify-center gap-1", className)}
-    >
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage <= 1}
-        aria-label="Trang trước"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-
-      {pages.map((page, index) =>
-        page === "ellipsis" ? (
-          <span
-            key={`ellipsis-${index}`}
-            className="px-2 text-sm text-muted-foreground"
-          >
-            ...
-          </span>
-        ) : (
-          <Button
-            key={page}
-            variant={page === currentPage ? "default" : "outline"}
-            size="icon"
-            onClick={() => onPageChange(page)}
-            aria-label={`Trang ${page}`}
-            aria-current={page === currentPage ? "page" : undefined}
-          >
-            {page}
-          </Button>
-        )
+      className={cn(
+        "flex items-center justify-between flex-wrap gap-2 pt-4",
+        className
       )}
+    >
+      <p className="text-sm text-muted-foreground">
+        Hiển thị <strong>{startItem}</strong> - <strong>{endItem}</strong> /{" "}
+        <strong>{totalItems}</strong>
+      </p>
 
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage >= totalPages}
-        aria-label="Trang sau"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-1">
+        <PaginationButton
+          href={buildUrl(currentPage - 1)}
+          disabled={currentPage <= 1}
+          onClick={
+            onPageChange
+              ? () => goToPage(currentPage - 1, currentPage <= 1)
+              : undefined
+          }
+          className="h-8 px-3"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span className="ml-1 hidden sm:inline">Trước</span>
+        </PaginationButton>
+
+        {pages.map((pageNum) => (
+          <PaginationButton
+            key={pageNum}
+            href={buildUrl(pageNum)}
+            disabled={false}
+            onClick={onPageChange ? () => goToPage(pageNum, false) : undefined}
+            className={cn(
+              "h-8 w-8",
+              currentPage === pageNum && "bg-blue-600 hover:bg-blue-700"
+            )}
+            variant={currentPage === pageNum ? "default" : "outline"}
+            ariaCurrent={currentPage === pageNum ? "page" : undefined}
+            ariaLabel={`Trang ${pageNum}`}
+          >
+            {pageNum}
+          </PaginationButton>
+        ))}
+
+        <PaginationButton
+          href={buildUrl(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          onClick={
+            onPageChange
+              ? () => goToPage(currentPage + 1, currentPage >= totalPages)
+              : undefined
+          }
+          className="h-8 px-3"
+        >
+          <span className="mr-1 hidden sm:inline">Sau</span>
+          <ChevronRight className="h-4 w-4" />
+        </PaginationButton>
+      </div>
     </nav>
+  );
+}
+
+function PaginationButton({
+  href,
+  disabled,
+  onClick,
+  className,
+  children,
+  variant = "outline",
+  ariaCurrent,
+  ariaLabel,
+}: {
+  href: string;
+  disabled: boolean;
+  onClick?: () => void;
+  className?: string;
+  children: ReactNode;
+  variant?: "default" | "outline";
+  ariaCurrent?: "page";
+  ariaLabel?: string;
+}) {
+  if (disabled || onClick) {
+    return (
+      <Button
+        type="button"
+        variant={variant}
+        size="sm"
+        disabled={disabled}
+        onClick={onClick}
+        className={className}
+        aria-current={ariaCurrent}
+        aria-label={ariaLabel}
+      >
+        {children}
+      </Button>
+    );
+  }
+
+  return (
+    <Button variant={variant} size="sm" className={className} asChild>
+      <Link href={href} aria-current={ariaCurrent} aria-label={ariaLabel}>
+        {children}
+      </Link>
+    </Button>
+  );
+}
+
+export function Pagination(props: PaginationProps) {
+  return (
+    <Suspense fallback={null}>
+      <PaginationControls {...props} />
+    </Suspense>
   );
 }

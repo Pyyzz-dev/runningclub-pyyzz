@@ -6,6 +6,14 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { PostStatus, PostWithAuthorEmail } from "@/lib/supabase/types";
 import { normalizeContentForSave } from "@/lib/utils/editorjs";
 import { isNotDeleted, restore, softDelete } from "@/lib/utils/softDelete";
+import {
+  emptyPaginated,
+  escapeIlike,
+  getPaginationRange,
+  isUnsatisfiableRangeError,
+  toPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/utils/pagination";
 
 type ActionResult<T = undefined> =
   | { data: T; error?: undefined }
@@ -21,22 +29,62 @@ function parsePostForm(formData: FormData) {
   };
 }
 
-export async function getAllPosts(): Promise<PostWithAuthorEmail[]> {
+export type AdminPostListFilters = {
+  page?: number;
+  search?: string;
+  status?: "all" | PostStatus;
+};
+
+export async function getAllPosts(
+  filters: AdminPostListFilters = {}
+): Promise<PaginatedResult<PostWithAuthorEmail>> {
+  const page = filters.page ?? 1;
+
   try {
     await requireAdmin();
   } catch {
-    return [];
+    return emptyPaginated(page, "Không có quyền thực hiện thao tác này");
   }
 
   const supabase = await createClient();
-  const { data: posts, error } = await supabase
+  const { from, to, currentPage } = getPaginationRange(page);
+  const trimmed = filters.search?.trim();
+  const escaped = trimmed ? escapeIlike(trimmed) : undefined;
+
+  let query = supabase
     .from("posts")
     .select(
-      "id, title, content, author_id, published_at, updated_at, status, cover_image_url, deleted_at, author:users!posts_author_id_fkey(id, full_name, avatar_url)"
+      "id, title, content, author_id, published_at, updated_at, status, cover_image_url, deleted_at, author:users!posts_author_id_fkey(id, full_name, avatar_url)",
+      { count: "exact" }
     )
     .order("published_at", { ascending: false, nullsFirst: false });
 
-  if (error || !posts) return [];
+  if (escaped) {
+    query = query.ilike("title", `%${escaped}%`);
+  }
+
+  if (filters.status && filters.status !== "all") {
+    query = query.eq("status", filters.status);
+  }
+
+  const { data: posts, error, count } = await query.range(from, to);
+
+  if (error || !posts) {
+    if (isUnsatisfiableRangeError(error)) {
+      let countQuery = supabase
+        .from("posts")
+        .select("id", { count: "exact", head: true });
+      if (escaped) {
+        countQuery = countQuery.ilike("title", `%${escaped}%`);
+      }
+      if (filters.status && filters.status !== "all") {
+        countQuery = countQuery.eq("status", filters.status);
+      }
+      const { count: total } = await countQuery;
+      return toPaginatedResult([], total, currentPage, null);
+    }
+    return emptyPaginated(currentPage, error?.message ?? null);
+  }
 
   const adminClient = createAdminClient();
   const authorIds = Array.from(new Set(posts.map((p) => p.author_id)));
@@ -49,7 +97,7 @@ export async function getAllPosts(): Promise<PostWithAuthorEmail[]> {
     })
   );
 
-  return posts.map((post) => {
+  const mapped = posts.map((post) => {
     const row = post as PostWithAuthorEmail;
     return {
       ...row,
@@ -59,11 +107,13 @@ export async function getAllPosts(): Promise<PostWithAuthorEmail[]> {
       },
     };
   });
+
+  return toPaginatedResult(mapped, count, currentPage, null);
 }
 
 /** @deprecated use getAllPosts */
-export async function getAllPostsAdmin() {
-  return getAllPosts();
+export async function getAllPostsAdmin(filters: AdminPostListFilters = {}) {
+  return getAllPosts(filters);
 }
 
 export async function createPost(formData: FormData): Promise<ActionResult> {

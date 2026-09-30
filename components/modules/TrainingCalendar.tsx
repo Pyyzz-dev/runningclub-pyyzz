@@ -16,6 +16,10 @@ import type { TrainingSchedule } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { formatDate, toDateInputValue } from "@/lib/format";
 import {
+  addCalendarDays,
+  createVietnamDate,
+} from "@/lib/utils/timezone";
+import {
   getTrainingStatus,
   type TrainingStatus,
 } from "@/lib/utils/trainingStatus";
@@ -30,19 +34,19 @@ interface TrainingCalendarProps {
 }
 
 function getWeekBounds(dateStr: string): { start: Date; end: Date } {
-  const date = new Date(dateStr);
-  const day = date.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const [yearRaw, monthRaw, dayRaw] = dateStr.split("-");
+  const year = Number(yearRaw);
+  const month = Number(monthRaw);
+  const day = Number(dayRaw);
+  const weekday = createVietnamDate(year, month, day, 12, 0).getUTCDay();
+  const diffToMonday = weekday === 0 ? -6 : 1 - weekday;
+  const monday = addCalendarDays(year, month, day, diffToMonday);
+  const sunday = addCalendarDays(monday.year, monday.month, monday.day, 6);
 
-  const start = new Date(date);
-  start.setDate(date.getDate() + diffToMonday);
-  start.setHours(0, 0, 0, 0);
-
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
+  return {
+    start: createVietnamDate(monday.year, monday.month, monday.day, 0, 0, 0, 0),
+    end: createVietnamDate(sunday.year, sunday.month, sunday.day, 23, 59, 59, 999),
+  };
 }
 
 export function TrainingCalendar({

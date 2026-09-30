@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -16,11 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, Search, User, Mail } from "lucide-react";
+import { QuerySearchInput } from "@/components/common/QuerySearchInput";
+import { MoreHorizontal, User, Mail } from "lucide-react";
 import { formatDate } from "@/lib/format";
-import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 import type { User as ClubUser } from "@/lib/supabase/types";
 
 export type MemberRow = Pick<
@@ -30,9 +28,9 @@ export type MemberRow = Pick<
 
 interface MembersTableProps {
   members: MemberRow[];
+  search: string;
+  startIndex?: number;
 }
-
-const ITEMS_PER_PAGE = 10;
 
 function getInitials(name: string) {
   return (
@@ -45,51 +43,20 @@ function getInitials(name: string) {
   );
 }
 
-export function MembersTable({ members }: MembersTableProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedSearch = useDebouncedValue(searchTerm, 400);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const filteredMembers = members.filter((member) => {
-    const query = debouncedSearch.toLowerCase();
-    return (
-      member.full_name?.toLowerCase().includes(query) ||
-      member.email?.toLowerCase().includes(query) ||
-      member.username?.toLowerCase().includes(query)
-    );
-  });
-
-  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedMembers = filteredMembers.slice(
-    startIndex,
-    startIndex + ITEMS_PER_PAGE
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
+export function MembersTable({
+  members,
+  search,
+  startIndex = 0,
+}: MembersTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Tìm kiếm thành viên..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9"
-          />
-        </div>
+        <QuerySearchInput
+          value={search}
+          placeholder="Tìm kiếm thành viên..."
+        />
         <p className="text-sm text-muted-foreground">
-          Hiển thị {paginatedMembers.length} / {filteredMembers.length} thành viên
+          Hiển thị {members.length} thành viên trên trang này
         </p>
       </div>
 
@@ -107,14 +74,14 @@ export function MembersTable({ members }: MembersTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedMembers.length === 0 ? (
+            {members.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                   Không tìm thấy thành viên nào.
                 </TableCell>
               </TableRow>
             ) : (
-              paginatedMembers.map((member, index) => (
+              members.map((member, index) => (
                 <TableRow key={member.id}>
                   <TableCell>{startIndex + index + 1}</TableCell>
                   <TableCell>
@@ -184,30 +151,6 @@ export function MembersTable({ members }: MembersTableProps) {
           </TableBody>
         </Table>
       </div>
-
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            disabled={currentPage === 1}
-          >
-            Trước
-          </Button>
-          <span className="px-3 py-1 text-sm">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Sau
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

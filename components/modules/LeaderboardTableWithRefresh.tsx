@@ -15,12 +15,14 @@ const REFRESH_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 giờ
 interface LeaderboardTableWithRefreshProps {
   initialData: LeaderboardEntry[];
   currentMemberName?: string | null;
+  initialPage?: number;
   className?: string;
 }
 
 export function LeaderboardTableWithRefresh({
   initialData,
   currentMemberName,
+  initialPage = 1,
   className,
 }: LeaderboardTableWithRefreshProps) {
   const [data, setData] = useState(initialData);
@@ -93,6 +95,7 @@ export function LeaderboardTableWithRefresh({
           data={data}
           currentMemberName={currentMemberName}
           itemsPerPage={10}
+          initialPage={initialPage}
         />
       )}
     </div>

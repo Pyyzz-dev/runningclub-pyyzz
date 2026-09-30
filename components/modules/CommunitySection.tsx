@@ -1,78 +1,81 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { PostCard } from "@/components/cards/PostCard";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { Pagination } from "@/components/common/Pagination";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useQueryFilters } from "@/lib/hooks/useQueryFilters";
 import type { PostWithAuthorAndCount } from "@/lib/supabase/types";
-import { isWithinDays } from "@/lib/format";
+import { ITEMS_PER_PAGE, type CommunityTab } from "@/lib/utils/pagination";
 import { cn } from "@/lib/utils";
-
-const POSTS_PER_PAGE = 9;
 
 interface CommunitySectionProps {
   posts: PostWithAuthorAndCount[];
+  tab: CommunityTab;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  itemsPerPage?: number;
   className?: string;
+  children: ReactNode;
 }
 
-function isFeaturedPost(post: PostWithAuthorAndCount): boolean {
-  return (
-    post.comment_count >= 3 ||
-    isWithinDays(post.published_at ?? post.updated_at, 3)
-  );
-}
+function CommunitySectionInner({
+  posts,
+  tab,
+  currentPage,
+  totalPages,
+  totalItems,
+  itemsPerPage = ITEMS_PER_PAGE,
+  className,
+  children,
+}: CommunitySectionProps) {
+  const { setFilters } = useQueryFilters();
+  const [activeTab, setActiveTab] = useState<CommunityTab>(tab);
 
-export function CommunitySection({ posts, className }: CommunitySectionProps) {
-  const [tab, setTab] = useState<"all" | "featured">("all");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const filteredPosts = useMemo(() => {
-    if (tab === "featured") {
-      return posts.filter(isFeaturedPost);
-    }
-    return posts;
-  }, [posts, tab]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredPosts.length / POSTS_PER_PAGE));
-
-  const paginatedPosts = useMemo(() => {
-    const start = (currentPage - 1) * POSTS_PER_PAGE;
-    return filteredPosts.slice(start, start + POSTS_PER_PAGE);
-  }, [filteredPosts, currentPage]);
-
-  const handleTabChange = (value: string) => {
-    setTab(value as "all" | "featured");
-    setCurrentPage(1);
-  };
+  useEffect(() => {
+    setActiveTab(tab);
+  }, [tab]);
 
   return (
     <div className={cn("space-y-6", className)}>
-      <Tabs value={tab} onValueChange={handleTabChange}>
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => {
+          const nextTab: CommunityTab = value === "featured" ? "featured" : "all";
+          setActiveTab(nextTab);
+          setFilters({ tab: nextTab === "featured" ? "featured" : null });
+        }}
+      >
         <TabsList>
           <TabsTrigger value="all">Tất cả</TabsTrigger>
           <TabsTrigger value="featured">Nổi bật</TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {paginatedPosts.length === 0 ? (
+      {posts.length === 0 ? (
         <p className="py-12 text-center text-muted-foreground">
           {tab === "featured"
             ? "Chưa có bài viết nổi bật."
             : "Chưa có bài viết nào."}
         </p>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {paginatedPosts.map((post, index) => (
-            <PostCard key={post.id} post={post} priority={index === 0} />
-          ))}
-        </div>
+        children
       )}
 
       <Pagination
         currentPage={currentPage}
         totalPages={totalPages}
-        onPageChange={setCurrentPage}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
       />
     </div>
+  );
+}
+
+export function CommunitySection(props: CommunitySectionProps) {
+  return (
+    <Suspense fallback={props.children}>
+      <CommunitySectionInner {...props} />
+    </Suspense>
   );
 }

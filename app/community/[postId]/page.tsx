@@ -1,18 +1,22 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { MessageCircle } from "lucide-react";
 import { Container } from "@/components/common/Container";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { CommentSection } from "@/components/community/CommentSection";
+import { CommentsSkeleton, PostSkeleton } from "@/components/skeletons/PostSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { fetchCurrentUser, fetchPostById } from "@/app/actions/dataActions";
+import {
+  fetchCurrentUser,
+  fetchPostComments,
+  fetchPostDetail,
+} from "@/app/actions/dataActions";
 import { formatPublishedAt } from "@/lib/format";
 import { renderEditorContent } from "@/lib/utils/editorjs";
 
-export const revalidate = 3600;
+export const revalidate = 300;
 
 type PostDetailPageProps = {
   params: Promise<{ postId: string }>;
@@ -20,15 +24,26 @@ type PostDetailPageProps = {
 
 export async function generateMetadata({ params }: PostDetailPageProps): Promise<Metadata> {
   const { postId } = await params;
-  const { data: post } = await fetchPostById(postId, false);
+  const { data: post } = await fetchPostDetail(postId);
   return { title: post?.title ?? "Bài viết" };
 }
 
-export default async function PostDetailPage({ params }: PostDetailPageProps) {
-  const { postId } = await params;
+async function CommentsBlock({ postId }: { postId: string }) {
   const { data: user } = await fetchCurrentUser();
   const isAdmin = user?.role === "admin";
-  const { data: post, error } = await fetchPostById(postId, isAdmin);
+  const { data: comments } = await fetchPostComments(postId, isAdmin);
+
+  return (
+    <CommentSection
+      postId={postId}
+      comments={comments ?? []}
+      isAdmin={isAdmin}
+    />
+  );
+}
+
+async function PostContent({ postId }: { postId: string }) {
+  const { data: post, error } = await fetchPostDetail(postId);
 
   if (error || !post) {
     notFound();
@@ -44,8 +59,6 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
-
-  const visibleCommentCount = post.comments.length;
 
   return (
     <Container className="section-padding">
@@ -86,11 +99,6 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
             <time dateTime={post.published_at ?? post.updated_at} suppressHydrationWarning>
               {formatPublishedAt(post.published_at ?? post.updated_at)}
             </time>
-            <span>•</span>
-            <Badge variant="outline" className="gap-1">
-              <MessageCircle className="h-3 w-3" />
-              {visibleCommentCount} bình luận
-            </Badge>
           </div>
         </header>
 
@@ -104,12 +112,23 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 
         <Separator className="my-10" />
 
-        <CommentSection
-          postId={post.id}
-          comments={post.comments}
-          isAdmin={isAdmin}
-        />
+        <Suspense fallback={<CommentsSkeleton />}>
+          <CommentsBlock postId={post.id} />
+        </Suspense>
       </article>
     </Container>
   );
+}
+
+export default function PostDetailPage({ params }: PostDetailPageProps) {
+  return (
+    <Suspense fallback={<PostSkeleton />}>
+      <PostDetail params={params} />
+    </Suspense>
+  );
+}
+
+async function PostDetail({ params }: PostDetailPageProps) {
+  const { postId } = await params;
+  return <PostContent postId={postId} />;
 }

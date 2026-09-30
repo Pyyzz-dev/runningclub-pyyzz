@@ -1,6 +1,16 @@
 import { createHash, randomBytes } from "crypto";
+import { cache } from "react";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { isNotDeleted, softDelete } from "@/lib/utils/softDelete";
+import {
+  escapeIlike,
+  emptyPaginated,
+  getPaginationRange,
+  isUnsatisfiableRangeError,
+  toPaginatedResult,
+  type CommunityTab,
+  type PaginatedResult,
+} from "@/lib/utils/pagination";
 import type {
   Achievement,
   ClubHistory,
@@ -57,6 +67,7 @@ function mapCommentWithAuthor(comment: CommentRowWithUser): CommentWithAuthor {
     is_anonymous: comment.is_anonymous,
     created_at: comment.created_at,
     is_hidden: comment.is_hidden ?? false,
+    deleted_at: comment.deleted_at ?? null,
     author: {
       id: author.id,
       full_name: author.full_name,
@@ -154,41 +165,131 @@ export async function getCommentCountsByPostIds(
   return counts;
 }
 
-export async function getAllPosts(
-  viewerIsAdmin = false
-): Promise<DbResult<PostWithAuthorAndCount[]>> {
+async function getFeaturedPublishedPostIds(
+  viewerIsAdmin: boolean
+): Promise<string[]> {
   const supabase = await createClient();
+  const cutoff = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data, error } = await isNotDeleted(
-    supabase.from("posts").select(
-      `
-      *,
-      author:users!posts_author_id_fkey(id, full_name, avatar_url)
-    `
-    )
-  )
-    .eq("status", "published")
-    .order("published_at", { ascending: false });
+  const [recentByPublished, recentByUpdated, commentsResult] = await Promise.all([
+    isNotDeleted(supabase.from("posts").select("id"))
+      .eq("status", "published")
+      .gte("published_at", cutoff),
+    isNotDeleted(supabase.from("posts").select("id"))
+      .eq("status", "published")
+      .is("published_at", null)
+      .gte("updated_at", cutoff),
+    (() => {
+      let query = supabase.from("comments").select("post_id");
+      if (!viewerIsAdmin) {
+        query = query.eq("is_hidden", false);
+      }
+      return query;
+    })(),
+  ]);
 
-  if (error) {
-    return { data: null, error: error.message };
+  const commentCounts = new Map<string, number>();
+  for (const row of commentsResult.data ?? []) {
+    commentCounts.set(row.post_id, (commentCounts.get(row.post_id) ?? 0) + 1);
   }
 
-  const posts = (data ?? []) as PostWithAuthor[];
+  const featuredIds = new Set<string>();
+  for (const row of recentByPublished.data ?? []) featuredIds.add(row.id);
+  for (const row of recentByUpdated.data ?? []) featuredIds.add(row.id);
+  for (const [postId, count] of commentCounts) {
+    if (count >= 3) featuredIds.add(postId);
+  }
+
+  return [...featuredIds];
+}
+
+async function mapPostsWithCommentCounts(
+  posts: PostWithAuthor[],
+  viewerIsAdmin: boolean
+): Promise<PostWithAuthorAndCount[]> {
   const counts = await getCommentCountsByPostIds(
     posts.map((post) => post.id),
     viewerIsAdmin
   );
 
-  const mapped = posts.map(
+  return posts.map(
     (post) =>
       ({
         ...post,
         comment_count: counts.get(post.id) ?? 0,
       }) as PostWithAuthorAndCount
   );
+}
 
-  return { data: mapped, error: null };
+export async function getAllPosts(
+  viewerIsAdmin = false,
+  page = 1,
+  tab: CommunityTab = "all"
+): Promise<PaginatedResult<PostWithAuthorAndCount>> {
+  const supabase = await createClient();
+  const { from, to, currentPage } = getPaginationRange(page);
+  const selectClause = `
+      *,
+      author:users!posts_author_id_fkey(id, full_name, avatar_url)
+    `;
+
+  if (tab === "featured") {
+    const featuredIds = await getFeaturedPublishedPostIds(viewerIsAdmin);
+    if (featuredIds.length === 0) {
+      return emptyPaginated(currentPage);
+    }
+
+    const { data, error, count } = await isNotDeleted(
+      supabase.from("posts").select(selectClause, { count: "exact" })
+    )
+      .eq("status", "published")
+      .in("id", featuredIds)
+      .order("published_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      if (isUnsatisfiableRangeError(error)) {
+        const { count: total } = await isNotDeleted(
+          supabase.from("posts").select("id", { count: "exact", head: true })
+        )
+          .eq("status", "published")
+          .in("id", featuredIds);
+        return toPaginatedResult([], total, currentPage, null);
+      }
+      return emptyPaginated(currentPage, error.message);
+    }
+
+    const mapped = await mapPostsWithCommentCounts(
+      (data ?? []) as PostWithAuthor[],
+      viewerIsAdmin
+    );
+
+    return toPaginatedResult(mapped, count, currentPage, null);
+  }
+
+  const { data, error, count } = await isNotDeleted(
+    supabase.from("posts").select(selectClause, { count: "exact" })
+  )
+    .eq("status", "published")
+    .order("published_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    if (isUnsatisfiableRangeError(error)) {
+      const { count: total } = await isNotDeleted(
+        supabase.from("posts").select("id", { count: "exact", head: true })
+      ).eq("status", "published");
+      return toPaginatedResult([], total, currentPage, null);
+    }
+    return emptyPaginated(currentPage, error.message);
+  }
+
+  const mapped = await mapPostsWithCommentCounts(
+    (data ?? []) as PostWithAuthor[],
+    viewerIsAdmin
+  );
+
+  return toPaginatedResult(mapped, count, currentPage, null);
 }
 
 /** Trang chủ: chỉ lấy cột cần thiết, giới hạn số lượng */
@@ -264,57 +365,99 @@ export function filterCommentsForViewer(
   return comments.filter((comment) => !comment.is_hidden);
 }
 
-export async function getPostById(
-  id: string,
-  viewerIsAdmin = false
-): Promise<DbResult<PostWithComments>> {
+const POST_DETAIL_SELECT = `
+  id,
+  title,
+  content,
+  cover_image_url,
+  published_at,
+  updated_at,
+  status,
+  author_id,
+  author:users!posts_author_id_fkey(id, full_name, avatar_url)
+`;
+
+const COMMENT_LIST_SELECT = `
+  id,
+  post_id,
+  user_id,
+  content,
+  is_anonymous,
+  created_at,
+  is_hidden,
+  deleted_at,
+  users(id, full_name, avatar_url)
+`;
+
+/** Bài viết + tác giả, không kèm comments. cache() để generateMetadata và page dùng chung 1 query. */
+export const getPostDetail = cache(async (id: string): Promise<DbResult<PostWithAuthor>> => {
   const supabase = await createClient();
 
-  const { data: post, error: postError } = await isNotDeleted(
-    supabase.from("posts").select(
-      `
-      *,
-      author:users!posts_author_id_fkey(id, full_name, avatar_url)
-    `
-    )
+  const { data: post, error } = await isNotDeleted(
+    supabase.from("posts").select(POST_DETAIL_SELECT)
   )
     .eq("id", id)
     .single();
 
-  if (postError) {
-    return { data: null, error: postError.message };
+  if (error) {
+    return { data: null, error: error.message };
   }
 
-  let commentsQuery = supabase
-    .from("comments")
-    .select(
-      `
-      *,
-      users(id, full_name, avatar_url)
-    `
-    )
-    .eq("post_id", id)
+  return { data: post as PostWithAuthor, error: null };
+});
+
+export async function getPostComments(
+  postId: string,
+  viewerIsAdmin = false
+): Promise<DbResult<CommentWithAuthor[]>> {
+  const supabase = await createClient();
+
+  let commentsQuery = isNotDeleted(
+    supabase.from("comments").select(COMMENT_LIST_SELECT)
+  )
+    .eq("post_id", postId)
     .order("created_at", { ascending: true });
 
   if (!viewerIsAdmin) {
     commentsQuery = commentsQuery.eq("is_hidden", false);
   }
 
-  const { data: comments, error: commentsError } = await commentsQuery;
+  const { data: comments, error } = await commentsQuery;
 
-  if (commentsError) {
-    return { data: null, error: commentsError.message };
+  if (error) {
+    return { data: null, error: error.message };
   }
 
-  const mappedComments = filterCommentsForViewer(
-    (comments ?? []).map((c) => mapCommentWithAuthor(c as CommentRowWithUser)),
-    viewerIsAdmin
-  );
+  return {
+    data: filterCommentsForViewer(
+      (comments ?? []).map((c) => mapCommentWithAuthor(c as CommentRowWithUser)),
+      viewerIsAdmin
+    ),
+    error: null,
+  };
+}
+
+export async function getPostById(
+  id: string,
+  viewerIsAdmin = false
+): Promise<DbResult<PostWithComments>> {
+  const [postResult, commentsResult] = await Promise.all([
+    getPostDetail(id),
+    getPostComments(id, viewerIsAdmin),
+  ]);
+
+  if (postResult.error || !postResult.data) {
+    return { data: null, error: postResult.error };
+  }
+
+  if (commentsResult.error) {
+    return { data: null, error: commentsResult.error };
+  }
 
   return {
     data: {
-      ...(post as PostWithAuthor),
-      comments: mappedComments,
+      ...postResult.data,
+      comments: commentsResult.data ?? [],
     },
     error: null,
   };
@@ -445,6 +588,29 @@ export async function getHistoryTimeline(): Promise<DbResult<ClubHistory[]>> {
     .order("event_date", { ascending: false });
 
   return { data, error: error?.message ?? null };
+}
+
+export async function getHistoryTimelinePaginated(
+  page: number
+): Promise<PaginatedResult<Pick<ClubHistory, "id" | "title" | "event_date">>> {
+  const supabase = await createClient();
+  const { from, to, currentPage } = getPaginationRange(page);
+
+  const { data, error, count } = await isNotDeleted(
+    supabase.from("club_history").select("id, title, event_date", { count: "exact" })
+  )
+    .order("order_index", { ascending: true })
+    .order("event_date", { ascending: false })
+    .range(from, to);
+
+  if (isUnsatisfiableRangeError(error)) {
+    const { count: total } = await isNotDeleted(
+      supabase.from("club_history").select("id", { count: "exact", head: true })
+    );
+    return toPaginatedResult([], total, currentPage, null);
+  }
+
+  return toPaginatedResult(data, count, currentPage, error?.message ?? null);
 }
 
 export async function getHistoryEventById(id: string): Promise<DbResult<ClubHistory>> {
@@ -724,6 +890,62 @@ export async function getUpcomingEvents(
   );
 
   return { data, error: error?.message ?? null };
+}
+
+const EVENT_LIST_COLUMNS =
+  "id, name, description, location, event_date, registration_deadline, event_link, participant_count, image_url, deleted_at";
+
+export async function getUpcomingEventsPaginated(
+  page: number,
+  filters: EventQueryFilters = {}
+): Promise<PaginatedResult<Event>> {
+  const supabase = await createClient();
+  const now = new Date().toISOString();
+  const trimmedSearch = filters.search?.trim();
+  const escapedSearch = trimmedSearch ? escapeIlike(trimmedSearch) : undefined;
+  const year = filters.year;
+  const month = filters.month;
+  const hasDateFilter = Boolean(year || month);
+  const { from, to, currentPage } = getPaginationRange(page);
+
+  let query = isNotDeleted(
+    supabase.from("events").select(EVENT_LIST_COLUMNS, { count: "exact" })
+  ).order("event_date", { ascending: true });
+
+  if (!hasDateFilter) {
+    query = query.gte("event_date", now);
+  } else if (year && month) {
+    const { start, end } = monthDateRange(year, month);
+    query = query.gte("event_date", start).lt("event_date", end);
+  } else if (year) {
+    query = query
+      .gte("event_date", `${year}-01-01`)
+      .lt("event_date", `${year + 1}-01-01`);
+  } else if (month) {
+    const availableYears = await getEventYears();
+    if (availableYears.length === 0) {
+      return emptyPaginated(currentPage);
+    }
+
+    const monthFilters = availableYears
+      .map((eventYear) => {
+        const { start, end } = monthDateRange(eventYear, month);
+        return `and(event_date.gte.${start},event_date.lt.${end})`;
+      })
+      .join(",");
+
+    query = query.or(monthFilters);
+  }
+
+  if (escapedSearch) {
+    query = query.ilike("name", `%${escapedSearch}%`);
+  }
+
+  const { data, error, count } = await query.range(from, to);
+  if (isUnsatisfiableRangeError(error)) {
+    return toPaginatedResult([], 0, currentPage, null);
+  }
+  return toPaginatedResult(data, count, currentPage, error?.message ?? null);
 }
 
 export async function getAllEvents(): Promise<DbResult<Event[]>> {
@@ -1035,6 +1257,56 @@ export async function getApprovedMembers(): Promise<DbResult<User[]>> {
     .order("created_at", { ascending: false });
 
   return { data, error: error?.message ?? null };
+}
+
+export async function getApprovedMembersPaginated(
+  page: number,
+  search?: string
+): Promise<PaginatedResult<User>> {
+  if (!(await isAdmin())) {
+    return emptyPaginated(page, "Không có quyền thực hiện thao tác này");
+  }
+
+  const supabase = await createClient();
+  const { from, to, currentPage } = getPaginationRange(page);
+  const trimmed = search?.trim();
+  const escaped = trimmed ? escapeIlike(trimmed) : undefined;
+
+  let query = supabase
+    .from("users")
+    .select(
+      "id, email, full_name, username, role, created_at, remarks, avatar_url",
+      { count: "exact" }
+    )
+    .eq("role", "member")
+    .order("created_at", { ascending: false });
+
+  if (escaped) {
+    query = query.or(
+      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,username.ilike.%${escaped}%`
+    );
+  }
+
+  const { data, error, count } = await query.range(from, to);
+  if (isUnsatisfiableRangeError(error)) {
+    let countQuery = supabase
+      .from("users")
+      .select("id", { count: "exact", head: true })
+      .eq("role", "member");
+    if (escaped) {
+      countQuery = countQuery.or(
+        `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,username.ilike.%${escaped}%`
+      );
+    }
+    const { count: total } = await countQuery;
+    return toPaginatedResult([], total, currentPage, null);
+  }
+  return toPaginatedResult(
+    data as User[] | null,
+    count,
+    currentPage,
+    error?.message ?? null
+  );
 }
 
 export async function createMemberAccount(

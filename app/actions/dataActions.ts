@@ -3,24 +3,28 @@
 import {
   getAchievements,
   getAllMembers,
-  getApprovedMembers,
+  getApprovedMembersPaginated,
   getAllPosts,
   getAllPostsAdmin,
   getAllTrainings,
   getCurrentUser,
   getEventById,
   getHistoryEventById,
-  getHistoryTimeline,
+  getHistoryTimelinePaginated,
   getHomepagePosts,
   getLeaderboard,
   getPostById,
+  getPostComments,
+  getPostDetail,
   getTrainingById,
   getUpcomingEvents,
+  getUpcomingEventsPaginated,
   getEventYears,
   getUpcomingTraining,
   type EventQueryFilters,
 } from "@/lib/utils/db-helpers";
 import type { LeaderboardPeriodType } from "@/lib/supabase/types";
+import type { CommunityTab } from "@/lib/utils/pagination";
 import { getUserTrainingRegistrations } from "@/app/actions/trainingParticipantActions";
 
 export async function fetchCurrentUser() {
@@ -32,8 +36,12 @@ export async function fetchCurrentUser() {
   }
 }
 
-export async function fetchAllPosts(viewerIsAdmin = false) {
-  return getAllPosts(viewerIsAdmin);
+export async function fetchAllPosts(
+  viewerIsAdmin = false,
+  page = 1,
+  tab: CommunityTab = "all"
+) {
+  return getAllPosts(viewerIsAdmin, page, tab);
 }
 
 export async function fetchAllPostsAdmin() {
@@ -44,12 +52,20 @@ export async function fetchPostById(id: string, viewerIsAdmin = false) {
   return getPostById(id, viewerIsAdmin);
 }
 
+export async function fetchPostDetail(id: string) {
+  return getPostDetail(id);
+}
+
+export async function fetchPostComments(postId: string, viewerIsAdmin = false) {
+  return getPostComments(postId, viewerIsAdmin);
+}
+
 export async function fetchTrainingById(id: string) {
   return getTrainingById(id);
 }
 
-export async function fetchHistoryTimeline() {
-  return getHistoryTimeline();
+export async function fetchHistoryTimelinePaginated(page: number) {
+  return getHistoryTimelinePaginated(page);
 }
 
 export async function fetchHistoryEventById(id: string) {
@@ -68,11 +84,11 @@ export async function fetchAllTrainings() {
   return getAllTrainings();
 }
 
-export async function fetchUpcomingEvents(
-  limit = 10,
+export async function fetchUpcomingEventsPaginated(
+  page: number,
   filters: EventQueryFilters = {}
 ) {
-  return getUpcomingEvents(limit, filters);
+  return getUpcomingEventsPaginated(page, filters);
 }
 
 export async function fetchEventYears() {
@@ -118,6 +134,6 @@ export async function fetchAllMembers() {
   return getAllMembers();
 }
 
-export async function fetchApprovedMembers() {
-  return getApprovedMembers();
+export async function fetchApprovedMembersPaginated(page: number, search?: string) {
+  return getApprovedMembersPaginated(page, search);
 }

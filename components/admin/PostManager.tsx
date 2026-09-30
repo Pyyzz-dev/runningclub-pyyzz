@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -31,15 +30,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PostWithAuthorEmail } from "@/lib/supabase/types";
+import { QuerySearchInput } from "@/components/common/QuerySearchInput";
+import { useQueryFilters } from "@/lib/hooks/useQueryFilters";
+import type { PostStatus, PostWithAuthorEmail } from "@/lib/supabase/types";
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { Edit, ExternalLink, Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, ExternalLink, Loader2, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useDebouncedValue } from "@/lib/hooks/useDebouncedValue";
 
 const PostFormDialog = dynamic(
   () =>
@@ -54,30 +54,23 @@ const PostFormDialog = dynamic(
 
 interface PostManagerProps {
   posts: PostWithAuthorEmail[];
+  search: string;
+  status: "all" | PostStatus;
   className?: string;
 }
 
-export function PostManager({ posts, className }: PostManagerProps) {
+export function PostManager({
+  posts,
+  search,
+  status,
+  className,
+}: PostManagerProps) {
   const router = useRouter();
-  const [search, setSearch] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 400);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { setFilters } = useQueryFilters();
   const [formOpen, setFormOpen] = useState(false);
   const [editPost, setEditPost] = useState<PostWithAuthorEmail | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-
-  const filtered = useMemo(() => {
-    return posts.filter((post) => {
-      const matchesSearch =
-        !debouncedSearch || post.title.toLowerCase().includes(debouncedSearch.toLowerCase());
-
-      const matchesStatus =
-        statusFilter === "all" || post.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [posts, debouncedSearch, statusFilter]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -100,16 +93,17 @@ export function PostManager({ posts, className }: PostManagerProps) {
     <div className={cn("space-y-4", className)}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-          <div className="relative max-w-xs flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo tiêu đề..."
-              className="pl-9"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <QuerySearchInput
+            value={search}
+            placeholder="Tìm theo tiêu đề..."
+            className="max-w-xs"
+          />
+          <Select
+            value={status}
+            onValueChange={(value) =>
+              setFilters({ status: value === "all" ? null : value })
+            }
+          >
             <SelectTrigger className="max-w-[160px]">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
@@ -143,7 +137,7 @@ export function PostManager({ posts, className }: PostManagerProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {posts.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={5}
@@ -153,7 +147,7 @@ export function PostManager({ posts, className }: PostManagerProps) {
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((post) => (
+              posts.map((post) => (
                 <TableRow
                   key={post.id}
                   className={post.deleted_at ? "bg-muted/40 opacity-70" : undefined}

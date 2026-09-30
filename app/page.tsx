@@ -7,6 +7,7 @@ import { HomeTrainingList } from "@/components/home/HomeTrainingList";
 import { Button } from "@/components/ui/button";
 import { HeroSection } from "@/components/home/HeroSection";
 import { fetchHomepageData } from "@/app/actions/dataActions";
+import { getPostExcerpt } from "@/lib/utils/editorjs";
 
 export const revalidate = 3600;
 
@@ -55,9 +56,14 @@ export default async function HomePage() {
 
       {posts.length > 0 && (
         <Section title="Bài viết nổi bật" subtitle="Cập nhật mới nhất từ cộng đồng">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {posts.map((post, index) => (
-              <PostCard key={post.id} post={post} priority={index === 0} />
+              <PostCard
+                key={post.id}
+                post={post}
+                excerpt={getPostExcerpt(post.content)}
+                priority={index === 0}
+              />
             ))}
           </div>
           <div className="mt-8 text-center">

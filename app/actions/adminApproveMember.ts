@@ -6,6 +6,13 @@ import { sendEmail } from "@/lib/email";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { Database, PendingMember } from "@/lib/supabase/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  emptyPaginated,
+  getPaginationRange,
+  isUnsatisfiableRangeError,
+  toPaginatedResult,
+  type PaginatedResult,
+} from "@/lib/utils/pagination";
 
 type ApproveResult =
   | { success: true; message: string; error?: undefined }
@@ -74,22 +81,36 @@ function getAppUrl() {
   return url.trim(); // chỉ cần trim khoảng trắng
 }
 
-export async function getPendingMembers(): Promise<PendingMember[]> {
+export async function getPendingMembers(
+  page = 1
+): Promise<PaginatedResult<PendingMember>> {
   try {
     await requireAdmin();
   } catch {
-    return [];
+    return emptyPaginated(page, "Không có quyền thực hiện thao tác này");
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { from, to, currentPage } = getPaginationRange(page);
+  const { data, error, count } = await supabase
     .from("pending_members")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("status", "pending")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(from, to);
 
-  if (error) return [];
-  return data ?? [];
+  if (error) {
+    if (isUnsatisfiableRangeError(error)) {
+      const { count: total } = await supabase
+        .from("pending_members")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      return toPaginatedResult([], total, currentPage, null);
+    }
+    return emptyPaginated(currentPage, error.message);
+  }
+
+  return toPaginatedResult(data, count, currentPage, null);
 }
 
 export async function approveMember(

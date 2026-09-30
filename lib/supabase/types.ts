@@ -104,6 +104,7 @@ export interface Database {
           is_anonymous: boolean;
           created_at: string;
           is_hidden: boolean;
+          deleted_at: string | null;
         };
         Insert: {
           id?: string;
@@ -113,6 +114,7 @@ export interface Database {
           is_anonymous?: boolean;
           created_at?: string;
           is_hidden?: boolean;
+          deleted_at?: string | null;
         };
         Update: {
           id?: string;
@@ -122,6 +124,7 @@ export interface Database {
           is_anonymous?: boolean;
           created_at?: string;
           is_hidden?: boolean;
+          deleted_at?: string | null;
         };
         Relationships: [
           {

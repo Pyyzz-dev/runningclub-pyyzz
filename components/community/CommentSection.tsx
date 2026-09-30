@@ -33,6 +33,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+const INITIAL_VISIBLE_COMMENTS = 5;
+
 interface CommentSectionProps {
   postId: string;
   comments: CommentWithAuthor[];
@@ -121,6 +123,7 @@ export function CommentSection({ postId, comments, isAdmin }: CommentSectionProp
   const [localComments, setLocalComments] = useState(comments);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setLocalComments(comments);
@@ -135,6 +138,10 @@ export function CommentSection({ postId, comments, isAdmin }: CommentSectionProp
   );
 
   const visibleCount = localComments.filter((comment) => !comment.is_hidden).length;
+  const displayedComments = expanded
+    ? visibleComments
+    : visibleComments.slice(0, INITIAL_VISIBLE_COMMENTS);
+  const hiddenCount = Math.max(visibleComments.length - INITIAL_VISIBLE_COMMENTS, 0);
 
   const handleToggleHide = async (commentId: string, currentlyHidden: boolean) => {
     const result = currentlyHidden
@@ -189,15 +196,27 @@ export function CommentSection({ postId, comments, isAdmin }: CommentSectionProp
             Chưa có bình luận. Hãy là người đầu tiên!
           </p>
         ) : (
-          visibleComments.map((comment) => (
-            <CommentItem
-              key={comment.id}
-              comment={comment}
-              isAdmin={isAdmin}
-              onToggleHide={handleToggleHide}
-              onDelete={setPendingDeleteId}
-            />
-          ))
+          <>
+            {displayedComments.map((comment) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                isAdmin={isAdmin}
+                onToggleHide={handleToggleHide}
+                onDelete={setPendingDeleteId}
+              />
+            ))}
+            {!expanded && hiddenCount > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => setExpanded(true)}
+              >
+                Xem thêm {hiddenCount} bình luận
+              </Button>
+            )}
+          </>
         )}
       </div>
 

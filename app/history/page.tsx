@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
+import { Pagination } from "@/components/common/Pagination";
 import { HistoryTimeline } from "@/components/history/HistoryTimeline";
-import { fetchHistoryTimeline } from "@/app/actions/dataActions";
+import { fetchHistoryTimelinePaginated } from "@/app/actions/dataActions";
+import { ITEMS_PER_PAGE, parsePageParam } from "@/lib/utils/pagination";
+import { redirectIfPageOutOfRange } from "@/lib/utils/pagination-redirect";
 
 export const revalidate = 3600;
 
@@ -10,11 +13,24 @@ export const metadata: Metadata = {
   title: "Phòng truyền thống",
 };
 
-export default async function HistoryPage() {
-  const { data: history, error } = await fetchHistoryTimeline();
+type HistoryPageProps = {
+  searchParams: Promise<{ page?: string }>;
+};
+
+export default async function HistoryPage({ searchParams }: HistoryPageProps) {
+  const { page } = await searchParams;
+  const currentPage = parsePageParam(page);
+  const result = await fetchHistoryTimelinePaginated(currentPage);
+  redirectIfPageOutOfRange(
+    "/history",
+    { page },
+    currentPage,
+    result.totalPages,
+    result.count
+  );
 
   const listItems =
-    history?.map(({ id, title, event_date }) => ({ id, title, event_date })) ?? [];
+    result.data.map(({ id, title, event_date }) => ({ id, title, event_date }));
 
   return (
     <>
@@ -32,10 +48,18 @@ export default async function HistoryPage() {
         subtitle="Hành trình phát triển của CLB qua các năm"
         className="!pt-4"
       >
-        {error ? (
-          <p className="text-center text-destructive">{error}</p>
+        {result.error ? (
+          <p className="text-center text-destructive">{result.error}</p>
         ) : (
-          <HistoryTimeline items={listItems} />
+          <>
+            <HistoryTimeline items={listItems} />
+            <Pagination
+              currentPage={result.currentPage}
+              totalPages={result.totalPages}
+              totalItems={result.count}
+              itemsPerPage={ITEMS_PER_PAGE}
+            />
+          </>
         )}
       </Section>
     </>
