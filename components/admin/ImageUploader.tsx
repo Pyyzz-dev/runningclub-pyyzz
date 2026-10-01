@@ -126,7 +126,13 @@ export function ImageUploader({
 
       {showPreview && preview && (
         <div className="relative h-40 w-40 overflow-hidden rounded-lg border">
-          <Image src={preview} alt="Preview" fill className="object-cover" />
+          <Image
+            src={preview}
+            alt="Preview"
+            fill
+            className="object-cover"
+            unoptimized={preview.includes("image.pollinations.ai")}
+          />
         </div>
       )}
     </div>

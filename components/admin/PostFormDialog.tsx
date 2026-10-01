@@ -1,5 +1,6 @@
 "use client";
 
+import { generateCoverImage } from "@/app/actions/aiActions";
 import { createPost, updatePost } from "@/app/actions/postActions";
 import {
   AIGeneratePostDialog,
@@ -27,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { PostWithAuthorEmail } from "@/lib/supabase/types";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -49,6 +50,8 @@ export function PostFormDialog({
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const [coverImageUrl, setCoverImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
+  const [coverError, setCoverError] = useState(false);
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const [editorNonce, setEditorNonce] = useState(0);
 
@@ -58,6 +61,8 @@ export function PostFormDialog({
       setContent(post?.content ?? "");
       setStatus(post?.status ?? "draft");
       setCoverImageUrl(post?.cover_image_url ?? "");
+      setCoverError(false);
+      setGeneratingImage(false);
       setEditorNonce(0);
       setAiDialogOpen(false);
     }
@@ -66,7 +71,36 @@ export function PostFormDialog({
   const handleAIGenerated = (data: GeneratedPostDraft) => {
     setTitle(data.title);
     setContent(data.content);
+    setCoverImageUrl(data.coverImageUrl);
     setEditorNonce((n) => n + 1);
+  };
+
+  const handleRegenerateCover = async () => {
+    if (!title.trim()) {
+      toast.error("Vui lòng nhập tiêu đề bài viết trước");
+      return;
+    }
+
+    setGeneratingImage(true);
+    setCoverError(false);
+
+    try {
+      const seed = Date.now() + Math.floor(Math.random() * 1_000_000);
+      const newImageUrl = await generateCoverImage(title, content, seed, coverImageUrl);
+
+      if (!newImageUrl || newImageUrl === coverImageUrl) {
+        toast.error("Không thể tạo ảnh khác. Vui lòng thử lại.");
+        return;
+      }
+
+      setCoverImageUrl(newImageUrl);
+      toast.success("Đã tạo ảnh bìa mới!");
+    } catch (error) {
+      console.error("Generate image error:", error);
+      toast.error("Không thể tạo ảnh bìa. Vui lòng thử lại.");
+    } finally {
+      setGeneratingImage(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,19 +181,67 @@ export function PostFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="post-cover">Ảnh bìa</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="post-cover">Ảnh bìa</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void handleRegenerateCover()}
+                disabled={generatingImage || submitting || !title.trim()}
+              >
+                {generatingImage ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang tạo...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Thay đổi ảnh bìa bằng AI
+                  </>
+                )}
+              </Button>
+            </div>
             <Input
               id="post-cover"
               value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
+              onChange={(e) => {
+                setCoverError(false);
+                setCoverImageUrl(e.target.value);
+              }}
               placeholder="https://..."
+              disabled={generatingImage}
             />
+            {coverImageUrl ? (
+              <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+                {coverError ? (
+                  <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    Không thể tải ảnh
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={coverImageUrl}
+                    src={coverImageUrl}
+                    alt="Xem trước ảnh bìa"
+                    className="h-full w-full object-cover"
+                    onError={() => setCoverError(true)}
+                  />
+                )}
+              </div>
+            ) : null}
             <ImageUploader
               folder="posts"
               currentImage={coverImageUrl}
               onImageUploaded={setCoverImageUrl}
               label="Tải ảnh bìa lên"
+              showPreview={false}
             />
+            <p className="text-xs text-muted-foreground">
+              Bấm &quot;Thay đổi ảnh bìa bằng AI&quot; để tạo ảnh mới theo tiêu đề.
+              Ảnh mới sẽ khác ảnh đang hiển thị. Nhớ lưu bài viết để cập nhật.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -197,7 +279,7 @@ export function PostFormDialog({
             >
               Hủy
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || generatingImage}>
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {post ? "Cập nhật" : "Tạo bài viết"}
             </Button>

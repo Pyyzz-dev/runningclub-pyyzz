@@ -8,6 +8,15 @@ import { parseEditorValue } from "@/lib/utils/editorjs";
 import type EditorJS from "@editorjs/editorjs";
 import { useEffect, useId, useRef } from "react";
 
+function destroyEditor(instance: EditorJS | null | undefined) {
+  if (!instance || typeof instance.destroy !== "function") return;
+  try {
+    instance.destroy();
+  } catch (error) {
+    console.warn("Editor destroy warning:", error);
+  }
+}
+
 export function EditorJs({
   value,
   onChange,
@@ -17,6 +26,7 @@ export function EditorJs({
 }: EditorJsProps) {
   const holderId = `editorjs-${useId().replace(/:/g, "")}`;
   const editorRef = useRef<EditorJS | null>(null);
+  const readyRef = useRef(false);
   const onChangeRef = useRef(onChange);
   const initialValueRef = useRef(value);
 
@@ -94,8 +104,9 @@ export function EditorJs({
         data: parseEditorValue(initialValueRef.current),
         onChange: async () => {
           try {
-            if (!editorRef.current) return;
-            const content = await editorRef.current.save();
+            const instance = editorRef.current;
+            if (!instance || typeof instance.save !== "function") return;
+            const content = await instance.save();
             onChangeRef.current(JSON.stringify(content));
           } catch (error) {
             console.error("[EditorJs onChange]", error);
@@ -104,12 +115,13 @@ export function EditorJs({
       });
 
       await editor.isReady;
-
-      if (isMounted) {
-        editorRef.current = editor;
-      } else {
-        await editor.destroy();
+      if (!isMounted) {
+        destroyEditor(editor);
+        return;
       }
+
+      editorRef.current = editor;
+      readyRef.current = true;
     };
 
     void init().catch((error) => {
@@ -118,11 +130,11 @@ export function EditorJs({
 
     return () => {
       isMounted = false;
-      const instance = editorRef.current ?? editor;
-      if (instance) {
-        void instance.destroy();
+      if (readyRef.current) {
+        destroyEditor(editorRef.current);
       }
       editorRef.current = null;
+      readyRef.current = false;
     };
   }, [holderId, placeholder, imageFolder]);
 

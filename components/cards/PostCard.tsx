@@ -15,8 +15,8 @@ import type { PostWithAuthorAndCount } from "@/lib/supabase/types";
 import { cn } from "@/lib/utils";
 import { getPostExcerpt } from "@/lib/utils/editorjs";
 import { ImageIcon, MessageCircle } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 interface PostCardProps {
   post: PostWithAuthorAndCount;
@@ -40,6 +40,7 @@ export function PostCard({
     .toUpperCase();
   const coverUrl = post.cover_image_url?.trim() || "";
   const excerpt = excerptProp ?? getPostExcerpt(post.content);
+  const [imageError, setImageError] = useState(false);
 
   return (
     <Card
@@ -49,15 +50,15 @@ export function PostCard({
       )}
     >
       <Link href={`/community/${post.id}`} className="flex h-full min-h-0 flex-col">
-        <div className="relative h-48 w-full shrink-0 overflow-hidden bg-muted">
-          {coverUrl ? (
-            <Image
+        <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-muted">
+          {coverUrl && !imageError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
               src={coverUrl}
               alt={post.title}
-              fill
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              priority={priority}
-              className="object-cover transition-transform group-hover:scale-105"
+              loading={priority ? "eager" : "lazy"}
+              className="h-full w-full object-cover transition-transform group-hover:scale-105"
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground/60">

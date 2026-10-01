@@ -74,14 +74,24 @@ async function PostContent({ postId }: { postId: string }) {
       <article className="mx-auto max-w-3xl animate-fade-in">
         {post.cover_image_url && (
           <div className="relative mb-8 aspect-video overflow-hidden rounded-xl">
-            <Image
-              src={post.cover_image_url}
-              alt={post.title}
-              fill
-              sizes="(max-width: 768px) 100vw, 768px"
-              className="object-cover"
-              priority
-            />
+            {post.cover_image_url.includes("unsplash.com") ||
+            post.cover_image_url.includes("image.pollinations.ai") ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={post.cover_image_url}
+                alt={post.title}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={post.cover_image_url}
+                alt={post.title}
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+                priority
+              />
+            )}
           </div>
         )}
 
