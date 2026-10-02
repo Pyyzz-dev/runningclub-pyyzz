@@ -1,6 +1,7 @@
 "use server";
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { generateCoverImageFromTitle } from "@/app/actions/nanoBananaActions";
 import { requireAdmin } from "@/app/actions/adminAuthActions";
 import { cleanHtmlContent } from "@/lib/utils/cleanHtml";
 import { isEmptyEditorContent } from "@/lib/utils/editorjs";
@@ -14,311 +15,12 @@ export type GeneratePostFromUrlResult =
       success: true;
       title: string;
       content: string;
+      imagePrompt: string;
       coverImageUrl: string;
+      usedFallback: boolean;
       authorId: string;
     }
   | { success: false; error: string };
-
-/**
- * Ảnh Unsplash đã kiểm tra, nhóm theo chủ đề.
- * source.unsplash.com trả HTTP 503 từ 2024 nên không tìm ảnh bằng URL đó.
- * Gemini tạo từ khóa tiếng Anh, rồi map sang nhóm ảnh khớp nội dung.
- */
-const COVER_TOPICS = [
-  {
-    id: "hydration",
-    terms: [
-      "drinking water",
-      "water bottle",
-      "sports drink",
-      "hydration",
-      "hydrate",
-      "electrolyte",
-      "uong nuoc",
-      "nuoc uong",
-      "dien giai",
-      "thirst",
-      "water",
-      "drink",
-      "uong",
-      "nuoc",
-    ],
-    photos: [
-      "photo-1523362628745-0c100150b504",
-      "photo-1548839140-29a749e1cf4d",
-      "photo-1602143407151-7111542de6e8",
-    ],
-  },
-  {
-    id: "nutrition",
-    terms: [
-      "healthy food",
-      "nutrition",
-      "protein",
-      "meal",
-      "diet",
-      "dinh duong",
-      "thuc pham",
-      "bua an",
-      "food",
-    ],
-    photos: [
-      "photo-1490645935967-10de6ba17061",
-      "photo-1512621776951-a57141f2eefd",
-      "photo-1546069901-ba9599a7e63c",
-    ],
-  },
-  {
-    id: "stretch",
-    terms: [
-      "stretching",
-      "stretch",
-      "warmup",
-      "warm up",
-      "mobility",
-      "flexibility",
-      "gian co",
-      "khoi dong",
-      "yoga",
-    ],
-    photos: [
-      "photo-1544367567-0f2fcb009e0b",
-      "photo-1483721310020-03333e577078",
-    ],
-  },
-  {
-    id: "technique",
-    terms: [
-      "running form",
-      "proper posture",
-      "runner technique",
-      "footstrike",
-      "stride",
-      "cadence",
-      "ky thuat",
-      "tu the",
-      "dang chay",
-      "sai chan",
-      "posture",
-      "technique",
-    ],
-    photos: [
-      "photo-1571008887538-b36bb32f4571",
-      "photo-1476480862126-209bfaa8edc8",
-      "photo-1486218119243-13883505764c",
-    ],
-  },
-  {
-    id: "peaceful",
-    terms: [
-      "peaceful running",
-      "solo runner",
-      "peaceful",
-      "sunrise",
-      "mindful",
-      "calm",
-      "stress",
-      "binh yen",
-      "mot minh",
-      "tinh than",
-      "giam stress",
-    ],
-    photos: [
-      "photo-1707326508037-d1fbd699f129",
-      "photo-1486218119243-13883505764c",
-      "photo-1513593771513-7b58b6c4af38",
-    ],
-  },
-  {
-    id: "race",
-    terms: ["marathon", "finish line", "giai chay", "duong dua", "race"],
-    photos: [
-      "photo-1452626038306-9aae5e071dd3",
-      "photo-1552674605-db6ffd4facb5",
-      "photo-1502904550040-7534597429ae",
-    ],
-  },
-] as const;
-
-const DEFAULT_COVERS = [
-  "photo-1476480862126-209bfaa8edc8",
-  "photo-1552674605-db6ffd4facb5",
-  "photo-1513593771513-7b58b6c4af38",
-  "photo-1571008887538-b36bb32f4571",
-  "photo-1486218119243-13883505764c",
-] as const;
-
-function normalizeSearchText(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function plainExcerpt(value: string, max = 500): string {
-  return value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, max);
-}
-
-function scoreTerms(text: string, terms: readonly string[]): number {
-  const haystack = ` ${normalizeSearchText(text)} `;
-  let score = 0;
-  for (const term of terms) {
-    if (haystack.includes(` ${term} `)) score += term.length;
-  }
-  return score;
-}
-
-function extractKeywords(title: string): string {
-  return (
-    normalizeSearchText(title)
-      .split(" ")
-      .filter((word) => word.length > 3)
-      .slice(0, 3)
-      .join(",") || "running,marathon,fitness"
-  );
-}
-
-function coverIndex(seed: string, length: number): number {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return hash % length;
-}
-
-function pickCoverPhotos(keywords: string, title: string, content: string): readonly string[] {
-  let bestScore = 0;
-  let bestPhotos: readonly string[] = DEFAULT_COVERS;
-
-  for (const topic of COVER_TOPICS) {
-    const score =
-      scoreTerms(keywords, topic.terms) * 3 +
-      scoreTerms(title, topic.terms) * 2 +
-      scoreTerms(plainExcerpt(content), topic.terms);
-    if (score > bestScore) {
-      bestScore = score;
-      bestPhotos = topic.photos;
-    }
-  }
-
-  return bestPhotos;
-}
-
-function unsplashPhotoId(url: string): string | null {
-  const match = /\/(photo-[0-9]+-[a-z0-9]+)/i.exec(url);
-  return match?.[1] ?? null;
-}
-
-function buildCoverImageUrl(
-  title: string,
-  content: string,
-  keywords: string,
-  seed: number,
-  excludeUrl = ""
-): string {
-  const topicPhotos = pickCoverPhotos(keywords, title, content);
-  const excludedId = unsplashPhotoId(excludeUrl);
-  let photos = topicPhotos.filter((id) => id !== excludedId);
-  if (photos.length === 0) {
-    photos = DEFAULT_COVERS.filter((id) => id !== excludedId);
-  }
-  if (photos.length === 0) {
-    photos = [...topicPhotos];
-  }
-
-  const photoId = photos[coverIndex(`${keywords}:${seed}`, photos.length)];
-  const imageUrl = `https://images.unsplash.com/${photoId}?w=1200&h=675&fit=crop&q=80&auto=format`;
-  console.log("=== COVER IMAGE ===");
-  console.log(keywords);
-  console.log(seed, photoId);
-  return imageUrl;
-}
-
-async function generateImagePrompt(title: string, content: string): Promise<string> {
-  const fallback = extractKeywords(title);
-  const genAI = getGeminiClient();
-  if (!genAI) return fallback;
-
-  const excerpt = plainExcerpt(content);
-  const prompt = `Bạn là chuyên gia tạo prompt ảnh cho blog về chạy bộ.
-
-Tiêu đề bài viết: "${title}"
-Nội dung tóm tắt: "${excerpt}"
-
-Hãy tạo MỘT mô tả ảnh (bằng tiếng Anh) ngắn gọn, súc tích (3-6 từ khóa) để tìm ảnh trên Unsplash sao cho PHÙ HỢP NHẤT với nội dung bài viết.
-
-Yêu cầu:
-- Chỉ trả về các từ khóa tiếng Anh, cách nhau bằng dấu phẩy
-- Không giải thích, không thêm text khác
-- Ưu tiên các từ khóa mô tả HÀNH ĐỘNG cụ thể (ví dụ: "person drinking water", "runner stretching", "marathon race")
-- Nếu bài viết về dinh dưỡng → ảnh về đồ ăn, uống nước
-- Nếu bài viết về kỹ thuật chạy → ảnh về tư thế chạy
-- Nếu bài viết về tinh thần → ảnh về người chạy một mình
-
-Ví dụ:
-- Tiêu đề "Bí quyết uống nước đúng cách" → "runner drinking water, hydration, sports drink"
-- Tiêu đề "Kỹ thuật chạy bộ đúng" → "running form, proper posture, runner technique"
-- Tiêu đề "Chạy bộ giảm stress" → "peaceful running, sunrise run, solo runner"
-
-Chỉ trả về từ khóa, không thêm gì khác.`;
-
-  for (const modelName of resolveGeminiModels()) {
-    try {
-      const model = genAI.getGenerativeModel({
-        model: modelName,
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 80,
-        },
-      });
-      const result = await model.generateContent(prompt);
-      const keywords = result.response
-        .text()
-        .replace(/[^a-zA-Z0-9,\s]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .slice(0, 100);
-      if (keywords) {
-        console.log("=== COVER KEYWORDS ===");
-        console.log(modelName, keywords);
-        return keywords;
-      }
-    } catch (error) {
-      console.warn("Failed to generate image prompt, trying next model:", error);
-    }
-  }
-
-  console.warn("Failed to generate image prompt, using fallback:", fallback);
-  return fallback;
-}
-
-/**
- * Tạo ảnh bìa 16:9 (1200x675) khớp tiêu đề và nội dung.
- * seed đổi ảnh mỗi lần bấm; excludeUrl là ảnh hiện tại, ảnh mới sẽ khác ảnh đó.
- * source.unsplash.com trả HTTP 503 nên dùng images.unsplash.com.
- */
-export async function generateCoverImage(
-  title: string,
-  content = "",
-  seed?: number,
-  excludeUrl = ""
-): Promise<string> {
-  await requireAdmin();
-  const keywords = await generateImagePrompt(title, content);
-  const imageSeed =
-    typeof seed === "number" && Number.isFinite(seed)
-      ? Math.trunc(seed)
-      : Date.now() + Math.floor(Math.random() * 1_000_000);
-  return buildCoverImageUrl(title, content, keywords, imageSeed, excludeUrl);
-}
 
 function toStoredHtml(html: string): string {
   const cleaned = cleanHtmlContent(html.trim());
@@ -337,6 +39,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+const MAX_TITLE_WORDS = 7;
+
+function limitTitleWords(title: string): string {
+  const words = title.trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, MAX_TITLE_WORDS).join(" ");
+}
+
+function fallbackImagePrompt(title: string): string {
+  return `Friendly cartoon illustration about running. The scene must match this title exactly: a runner whose action illustrates "${title}". with the text "${title}" written on it.`;
+}
+
+function alignImagePrompt(imagePrompt: string, title: string): string {
+  const prompt = imagePrompt.trim();
+  if (!prompt) return fallbackImagePrompt(title);
+  if (prompt.includes(`"${title}"`)) return prompt;
+  return `${prompt}\nwith the text "${title}" written on it.`;
+}
+
 function readJsonString(record: Record<string, unknown>, keys: readonly string[]): string {
   for (const key of keys) {
     const value = record[key];
@@ -345,7 +65,46 @@ function readJsonString(record: Record<string, unknown>, keys: readonly string[]
   return "";
 }
 
-function parseAIResponse(response: string): { title: string; content: string } | null {
+function readLooseJsonString(source: string, key: string): string {
+  const marker = new RegExp(`"${key}"\\s*:\\s*"`, "i").exec(source);
+  if (!marker) return "";
+
+  const valueStart = marker.index + marker[0].length;
+  for (let index = valueStart; index < source.length; index += 1) {
+    if (source[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (source[index] !== '"') continue;
+    const rest = source.slice(index + 1).trimStart();
+    if (rest.startsWith(",") || rest.startsWith("}")) {
+      return source
+        .slice(valueStart, index)
+        .replace(/\\"/g, '"')
+        .replace(/\\n/g, "\n")
+        .trim();
+    }
+  }
+
+  return "";
+}
+
+function draftFromLooseJson(
+  source: string
+): { title: string; content: string; imagePrompt: string } | null {
+  const title = limitTitleWords(readLooseJsonString(source, "title"));
+  const content =
+    readLooseJsonString(source, "content") || readLooseJsonString(source, "contentHtml");
+  const imagePrompt =
+    readLooseJsonString(source, "image_prompt") || readLooseJsonString(source, "imagePrompt");
+
+  if (!title || !content) return null;
+  return { title, content, imagePrompt: alignImagePrompt(imagePrompt, title) };
+}
+
+function parseAIResponse(
+  response: string
+): { title: string; content: string; imagePrompt: string } | null {
   const cleanResponse = response
     .replace(/```json\n?/gi, "")
     .replace(/```\n?/g, "")
@@ -362,7 +121,7 @@ function parseAIResponse(response: string): { title: string; content: string } |
       const parsed: unknown = JSON.parse(candidate);
       if (!isRecord(parsed)) continue;
 
-      const title = readJsonString(parsed, ["title", "Title"]);
+      const title = limitTitleWords(readJsonString(parsed, ["title", "Title"]));
       const content = readJsonString(parsed, [
         "content",
         "contentHtml",
@@ -370,22 +129,25 @@ function parseAIResponse(response: string): { title: string; content: string } |
         "ContentHtml",
         "html",
       ]);
+      const imagePrompt = readJsonString(parsed, ["image_prompt", "imagePrompt", "ImagePrompt"]);
 
       if (title && content) {
-        return { title: title.slice(0, 100), content };
+        return { title, content, imagePrompt: alignImagePrompt(imagePrompt, title) };
       }
     } catch (error) {
       console.warn("JSON parse failed:", error);
+      const loose = draftFromLooseJson(candidate);
+      if (loose) return loose;
     }
   }
 
   const titleMatch = response.match(/---TITLE---\s*([\s\S]*?)\s*---CONTENT---/);
   const contentMatch = response.match(/---CONTENT---\s*([\s\S]*?)\s*---END---/);
   if (titleMatch?.[1] && contentMatch?.[1]) {
-    const title = titleMatch[1].trim();
+    const title = limitTitleWords(titleMatch[1]);
     const content = contentMatch[1].trim();
     if (title && content) {
-      return { title: title.slice(0, 100), content };
+      return { title, content, imagePrompt: alignImagePrompt("", title) };
     }
   }
 
@@ -561,7 +323,7 @@ async function generateWithRetries(
     model: modelName,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 4000,
+      maxOutputTokens: 8000,
       responseMimeType: "application/json",
     },
   });
@@ -621,23 +383,33 @@ export async function generatePostFromUrl(
 
   const modelCandidates = resolveGeminiModels();
 
-  const prompt = `Bạn là biên tập viên câu lạc bộ chạy bộ CMC Global.
-Đọc nội dung nguồn (text đã trích từ bài viết) và viết lại thành bài cho cộng đồng CLB.
+  const prompt = `Bạn là biên tập viên cho CLB chạy bộ CMC Global.
+Đọc nội dung nguồn và viết lại thành bài cho cộng đồng CLB.
 
-Yêu cầu:
-- title: tiếng Việt, hấp dẫn, tối đa 100 ký tự.
-- content: tiếng Việt, 300-800 từ, giọng thân thiện, truyền cảm hứng, là HTML.
-- Chỉ dùng các thẻ: p, h2, h3, ul, ol, li, blockquote.
-- Không bịa số liệu. Nếu nguồn không đủ, tổng hợp những gì có.
-- Không sao chép nguyên văn dài. Không thêm quảng cáo.
+Nhiệm vụ 1: Tạo tiêu đề (title) cho bài viết.
+Yêu cầu: Ngắn gọn, súc tích, KHÔNG QUÁ 7 TỪ.
+Phải truyền tải được nội dung chính của bài viết.
 
-Trả về kết quả dưới dạng JSON với cấu trúc CHÍNH XÁC như sau:
+Nhiệm vụ 2: Viết nội dung (content).
+Yêu cầu: tiếng Việt, 300-800 từ, giọng thân thiện, truyền cảm hứng, là HTML.
+Chỉ dùng các thẻ: p, h2, h3, ul, ol, li, blockquote.
+Không bịa số liệu. Nếu nguồn không đủ, tổng hợp những gì có.
+Không sao chép nguyên văn dài. Không thêm quảng cáo.
+
+Nhiệm vụ 3: Tạo mô tả (image_prompt) cho ảnh bìa.
+Phong cách: Hoạt hình (cartoon/illustration), thân thiện, liên quan đến chạy bộ.
+Yêu cầu: Phải dựa HOÀN TOÀN trên tiêu đề vừa tạo.
+Ví dụ: Nếu title là "Bí quyết uống nước trong race", image_prompt phải mô tả cảnh "một runner đang chạy trong cuộc đua và uống nước".
+QUAN TRỌNG: Trong image_prompt, hãy yêu cầu AI chèn CHÍNH XÁC toàn bộ tiêu đề (title) vào ảnh. Ví dụ: with the text "Bí quyết uống nước trong race" written on it.
+
+Trả về kết quả dưới dạng JSON. Viết title và image_prompt trước, content sau:
 {
-  "title": "Tiêu đề bài viết",
-  "content": "<p>Nội dung HTML</p>"
+  "title": "...",
+  "image_prompt": "...",
+  "content": "..."
 }
 
-Lưu ý: Key phải là "title" và "content" (chữ thường), không dùng "contentHtml" hay bất kỳ tên nào khác.
+Key phải là "title", "content" và "image_prompt" (chữ thường).
 
 Nguồn URL: ${parsedUrl.toString()}
 
@@ -679,11 +451,18 @@ ${pageText}
       return { success: false, error: "AI không tạo được nội dung hợp lệ" };
     }
 
+    const imageResult = await generateCoverImageFromTitle(draft.title, "16:9");
+    if (!imageResult.success) {
+      console.error("[generatePostFromUrl] cover", imageResult.error);
+    }
+
     return {
       success: true,
       title: draft.title,
       content,
-      coverImageUrl: await generateCoverImage(draft.title, content),
+      imagePrompt: draft.imagePrompt,
+      coverImageUrl: imageResult.success ? imageResult.url : "",
+      usedFallback: imageResult.success ? imageResult.usedFallback : false,
       authorId: adminUser.id,
     };
   } catch (error) {

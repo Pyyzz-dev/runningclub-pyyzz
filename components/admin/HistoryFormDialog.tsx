@@ -38,15 +38,32 @@ export function HistoryFormDialog({
   const [imageUrl, setImageUrl] = useState("");
   const [orderIndex, setOrderIndex] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
-  useEffect(() => {
+  const entryKey = open ? (entry?.id ?? "new") : "closed";
+  const [appliedKey, setAppliedKey] = useState("");
+
+  if (appliedKey !== entryKey) {
+    setAppliedKey(entryKey);
     if (open) {
       setTitle(entry?.title ?? "");
       setContent(entry?.content ?? "");
       setEventDate(toDateInputValue(entry?.event_date));
       setImageUrl(entry?.image_url ?? "");
       setOrderIndex(entry?.order_index ?? 0);
+      setImageError(false);
     }
+  }
+
+  useEffect(() => {
+    if (!open) return;
+
+    setTitle(entry?.title ?? "");
+    setContent(entry?.content ?? "");
+    setEventDate(toDateInputValue(entry?.event_date));
+    setImageUrl(entry?.image_url ?? "");
+    setOrderIndex(entry?.order_index ?? 0);
+    setImageError(false);
   }, [open, entry]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,17 +116,6 @@ export function HistoryFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Nội dung</Label>
-            <EditorJs
-              key={`${open}-${entry?.id ?? "new"}`}
-              value={content}
-              onChange={setContent}
-              placeholder="Mô tả chi tiết sự kiện..."
-              imageFolder="history"
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="history-date">Ngày sự kiện</Label>
             <Input
               id="history-date"
@@ -121,12 +127,49 @@ export function HistoryFormDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Ảnh minh họa (thumbnail)</Label>
+            <Label>Ảnh minh họa</Label>
+            <div className="relative aspect-video w-full overflow-hidden rounded-lg border bg-muted">
+              {imageUrl && !imageError ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={imageUrl}
+                  src={imageUrl}
+                  alt="Ảnh minh họa"
+                  className="h-full w-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                  {imageError ? "Không thể tải ảnh" : "Chưa có ảnh minh họa"}
+                </div>
+              )}
+            </div>
             <ImageUploader
+              key={entry?.id ?? "new"}
               folder="history"
               currentImage={imageUrl}
-              onImageUploaded={setImageUrl}
+              onImageUploaded={(url) => {
+                setImageError(false);
+                setImageUrl(url);
+              }}
               label="Tải ảnh minh họa"
+              showPreview={false}
+            />
+            {imageUrl ? (
+              <p className="text-xs text-muted-foreground">
+                Ảnh hiện tại đã được tải lên
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Nội dung</Label>
+            <EditorJs
+              key={appliedKey || entry?.id || "new"}
+              value={content}
+              onChange={setContent}
+              placeholder="Mô tả chi tiết sự kiện..."
+              imageFolder="history"
             />
           </div>
 

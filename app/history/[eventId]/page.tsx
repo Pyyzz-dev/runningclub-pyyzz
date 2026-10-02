@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { fetchCurrentUser, fetchHistoryEventById } from "@/app/actions/dataActions";
 import { getHistoryComments } from "@/app/actions/historyCommentActions";
 import { HistoryCommentSection } from "@/components/history/HistoryCommentSection";
+import { CommentsSkeleton } from "@/components/skeletons/PostSkeleton";
 import { formatDate } from "@/lib/format";
 import { renderEditorContent } from "@/lib/utils/editorjs";
+import { HistoryEventSkeleton } from "./loading";
 
-export const revalidate = 0;
+export const revalidate = 300;
 
 type HistoryEventPageProps = {
   params: Promise<{ eventId: string }>;
@@ -24,18 +27,28 @@ export async function generateMetadata({ params }: HistoryEventPageProps): Promi
   return { title: event?.title ?? "Sự kiện lịch sử" };
 }
 
-export default async function HistoryEventPage({ params }: HistoryEventPageProps) {
-  const { eventId } = await params;
+async function CommentsBlock({ historyId }: { historyId: string }) {
+  const [{ data: user }, comments] = await Promise.all([
+    fetchCurrentUser(),
+    getHistoryComments(historyId),
+  ]);
+
+  return (
+    <HistoryCommentSection
+      historyId={historyId}
+      comments={comments}
+      isAdmin={user?.role === "admin"}
+      currentUserId={user?.id ?? null}
+    />
+  );
+}
+
+async function HistoryContent({ eventId }: { eventId: string }) {
   const { data: event, error } = await fetchHistoryEventById(eventId);
 
   if (error || !event) {
     notFound();
   }
-
-  const [{ data: user }, comments] = await Promise.all([
-    fetchCurrentUser(),
-    getHistoryComments(event.id),
-  ]);
 
   return (
     <Container className="section-padding">
@@ -81,14 +94,24 @@ export default async function HistoryEventPage({ params }: HistoryEventPageProps
         />
 
         <div className="mt-12 border-t pt-8">
-          <HistoryCommentSection
-            historyId={event.id}
-            comments={comments}
-            isAdmin={user?.role === "admin"}
-            currentUserId={user?.id ?? null}
-          />
+          <Suspense fallback={<CommentsSkeleton />}>
+            <CommentsBlock historyId={event.id} />
+          </Suspense>
         </div>
       </article>
     </Container>
   );
+}
+
+export default function HistoryEventPage({ params }: HistoryEventPageProps) {
+  return (
+    <Suspense fallback={<HistoryEventSkeleton />}>
+      <HistoryEvent params={params} />
+    </Suspense>
+  );
+}
+
+async function HistoryEvent({ params }: HistoryEventPageProps) {
+  const { eventId } = await params;
+  return <HistoryContent eventId={eventId} />;
 }

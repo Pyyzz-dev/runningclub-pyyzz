@@ -56,6 +56,8 @@ export function EditorJs({
 
       if (!isMounted) return;
 
+      const saved = parseEditorValue(initialValueRef.current);
+
       editor = new EditorJSConstructor({
         holder: holderId,
         placeholder: placeholder || "Viết nội dung...",
@@ -92,6 +94,13 @@ export function EditorJs({
                     return { success: 0 };
                   }
                 },
+                async uploadByUrl(url: string) {
+                  const trimmed = url.trim();
+                  if (!/^https?:\/\//i.test(trimmed)) {
+                    return { success: 0 };
+                  }
+                  return { success: 1, file: { url: trimmed } };
+                },
               },
             },
           },
@@ -101,7 +110,7 @@ export function EditorJs({
           },
           quote: { class: Quote, inlineToolbar: true },
         },
-        data: parseEditorValue(initialValueRef.current),
+        data: { blocks: saved.blocks },
         onChange: async () => {
           try {
             const instance = editorRef.current;

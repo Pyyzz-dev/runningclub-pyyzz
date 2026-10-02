@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   title: "Quản lý Bài viết",
 };
 
+export const maxDuration = 60;
+
 type AdminCommunityPageProps = {
   searchParams: Promise<{ page?: string; search?: string; status?: string }>;
 };

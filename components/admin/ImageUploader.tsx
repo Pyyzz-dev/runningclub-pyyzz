@@ -6,7 +6,6 @@ import type { StorageUploadFolder } from "@/lib/supabase/storage-config";
 import { compressImage } from "@/lib/utils/compressImage";
 import { cn } from "@/lib/utils";
 import { Loader2, Upload, X } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -125,13 +124,13 @@ export function ImageUploader({
       </div>
 
       {showPreview && preview && (
-        <div className="relative h-40 w-40 overflow-hidden rounded-lg border">
-          <Image
+        <div className="relative h-40 w-40 overflow-hidden rounded-lg border bg-muted">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={preview}
             src={preview}
             alt="Preview"
-            fill
-            className="object-cover"
-            unoptimized={preview.includes("image.pollinations.ai")}
+            className="h-full w-full object-cover"
           />
         </div>
       )}

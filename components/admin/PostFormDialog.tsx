@@ -1,6 +1,6 @@
 "use client";
 
-import { generateCoverImage } from "@/app/actions/aiActions";
+import { generateCoverImageFromTitle } from "@/app/actions/nanoBananaActions";
 import { createPost, updatePost } from "@/app/actions/postActions";
 import {
   AIGeneratePostDialog,
@@ -85,16 +85,18 @@ export function PostFormDialog({
     setCoverError(false);
 
     try {
-      const seed = Date.now() + Math.floor(Math.random() * 1_000_000);
-      const newImageUrl = await generateCoverImage(title, content, seed, coverImageUrl);
-
-      if (!newImageUrl || newImageUrl === coverImageUrl) {
-        toast.error("Không thể tạo ảnh khác. Vui lòng thử lại.");
+      const imageResult = await generateCoverImageFromTitle(title.trim(), "16:9");
+      if (!imageResult.success || imageResult.url === coverImageUrl) {
+        toast.error(imageResult.success ? "Không thể tạo ảnh khác. Vui lòng thử lại." : imageResult.error);
         return;
       }
 
-      setCoverImageUrl(newImageUrl);
-      toast.success("Đã tạo ảnh bìa mới!");
+      setCoverImageUrl(imageResult.url);
+      if (imageResult.usedFallback) {
+        toast.warning("Nano Banana không khả dụng, đã dùng ảnh Unsplash thay thế.");
+      } else {
+        toast.success("Đã tạo ảnh bìa mới!");
+      }
     } catch (error) {
       console.error("Generate image error:", error);
       toast.error("Không thể tạo ảnh bìa. Vui lòng thử lại.");

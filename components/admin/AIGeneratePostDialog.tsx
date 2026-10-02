@@ -1,9 +1,7 @@
 "use client";
 
-import {
-  generateCoverImage,
-  generatePostFromUrl,
-} from "@/app/actions/aiActions";
+import { generatePostFromUrl } from "@/app/actions/aiActions";
+import { generateCoverImageFromTitle } from "@/app/actions/nanoBananaActions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -36,6 +34,7 @@ interface AIGeneratePostDialogProps {
 interface PostPreview {
   title: string;
   content: string;
+  imagePrompt: string;
   coverImageUrl: string;
   authorId: string;
 }
@@ -70,21 +69,46 @@ export function AIGeneratePostDialog({
 
     setLoading(true);
     setImageError(false);
-    const result = await generatePostFromUrl(url);
-    setLoading(false);
+    try {
+      const result = await generatePostFromUrl(url);
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
 
-    if (!result.success) {
-      toast.error(result.error);
-      return;
+      let coverImageUrl = result.coverImageUrl;
+      let usedFallback = result.usedFallback;
+      if (!coverImageUrl) {
+        const imageResult = await generateCoverImageFromTitle(result.title, "16:9");
+        if (!imageResult.success) {
+          toast.error(imageResult.error);
+        } else {
+          coverImageUrl = imageResult.url;
+          usedFallback = imageResult.usedFallback;
+        }
+      }
+
+      setPreview({
+        title: result.title,
+        content: result.content,
+        imagePrompt: result.imagePrompt,
+        coverImageUrl,
+        authorId: result.authorId,
+      });
+      setImageError(!coverImageUrl);
+      if (!coverImageUrl) {
+        toast.success("Đã tạo bài viết. Hãy tạo lại ảnh bìa.");
+      } else if (usedFallback) {
+        toast.warning("Nano Banana không khả dụng, đã dùng ảnh Unsplash thay thế.");
+      } else {
+        toast.success("Đã tạo bài viết và ảnh bìa bằng AI!");
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Không tạo được bài viết";
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
-
-    setPreview({
-      title: result.title,
-      content: result.content,
-      coverImageUrl: result.coverImageUrl,
-      authorId: result.authorId,
-    });
-    toast.success("Đã tạo bài viết và ảnh bìa!");
   };
 
   const handleRegenerateImage = async () => {
@@ -93,15 +117,17 @@ export function AIGeneratePostDialog({
     setLoading(true);
     setImageError(false);
     try {
-      const seed = Date.now() + Math.floor(Math.random() * 1_000_000);
-      const coverImageUrl = await generateCoverImage(
-        preview.title,
-        preview.content,
-        seed,
-        preview.coverImageUrl
-      );
-      setPreview({ ...preview, coverImageUrl });
-      toast.success("Đã tạo ảnh bìa mới!");
+      const imageResult = await generateCoverImageFromTitle(preview.title.trim(), "16:9");
+      if (!imageResult.success) {
+        toast.error(imageResult.error);
+        return;
+      }
+      setPreview({ ...preview, coverImageUrl: imageResult.url });
+      if (imageResult.usedFallback) {
+        toast.warning("Nano Banana không khả dụng, đã dùng ảnh Unsplash thay thế.");
+      } else {
+        toast.success("Đã tạo ảnh bìa mới!");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Không tạo được ảnh bìa";
       toast.error(message);

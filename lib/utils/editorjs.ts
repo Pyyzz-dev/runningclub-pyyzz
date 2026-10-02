@@ -216,14 +216,113 @@ export function isEmptyEditorContent(value: string): boolean {
   return !text || value === "<p></p>";
 }
 
-function htmlToEditorBlocks(html: string): EditorJsOutput {
-  const blocks: EditorJsBlock[] = [];
-  const chunkRegex = /<(h[2-4]|p|blockquote|ul|ol)[^>]*>([\s\S]*?)<\/\1>/gi;
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0*39;|&apos;/gi, "'");
+}
+
+function imageBlock(url: string, caption = ""): EditorJsBlock | null {
+  const cleanUrl = decodeHtmlEntities(url).trim();
+  if (!cleanUrl) return null;
+  return {
+    type: "image",
+    data: {
+      caption,
+      withBorder: false,
+      withBackground: false,
+      stretched: false,
+      file: { url: cleanUrl },
+    },
+  };
+}
+
+function readImageUrl(data: Record<string, unknown>): string {
+  const file = data.file;
+  if (typeof file === "string") return decodeHtmlEntities(file).trim();
+  if (file && typeof file === "object" && "url" in file) {
+    const url = (file as { url?: unknown }).url;
+    if (typeof url === "string") return decodeHtmlEntities(url).trim();
+  }
+  if (typeof data.url === "string") return decodeHtmlEntities(data.url).trim();
+  if (typeof data.src === "string") return decodeHtmlEntities(data.src).trim();
+  return "";
+}
+
+function normalizeImageBlock(block: EditorJsBlock): EditorJsBlock | null {
+  const url = readImageUrl(block.data ?? {});
+  if (!url) return null;
+  const caption = typeof block.data?.caption === "string" ? block.data.caption : "";
+  return {
+    ...block,
+    type: "image",
+    data: {
+      caption,
+      withBorder: block.data?.withBorder === true,
+      withBackground: block.data?.withBackground === true,
+      stretched: block.data?.stretched === true,
+      file: { url },
+    },
+  };
+}
+
+function appendHtmlWithImages(
+  blocks: EditorJsBlock[],
+  html: string,
+  caption = ""
+): void {
+  const imgRegex = /<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  let lastIndex = 0;
   let match: RegExpExecArray | null;
 
+  while ((match = imgRegex.exec(html)) !== null) {
+    const before = html
+      .slice(lastIndex, match.index)
+      .replace(/<figcaption[\s\S]*?<\/figcaption>/gi, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (before) {
+      blocks.push({ type: "paragraph", data: { text: before } });
+    }
+    const block = imageBlock(match[1], caption);
+    if (block) blocks.push(block);
+    lastIndex = match.index + match[0].length;
+  }
+
+  const after = html
+    .slice(lastIndex)
+    .replace(/<figcaption[\s\S]*?<\/figcaption>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (after) {
+    blocks.push({ type: "paragraph", data: { text: after } });
+  }
+}
+
+function htmlToEditorBlocks(html: string): EditorJsOutput {
+  const blocks: EditorJsBlock[] = [];
+  const chunkRegex =
+    /<(h[2-4]|p|blockquote|ul|ol|figure)\b[^>]*>[\s\S]*?<\/\1>|<img\b[^>]*>/gi;
+  let match: RegExpExecArray | null;
+  let found = false;
+
   while ((match = chunkRegex.exec(html)) !== null) {
+    found = true;
+    const full = match[0];
+    if (/^<img\b/i.test(full)) {
+      const src = /\bsrc\s*=\s*["']([^"']+)["']/i.exec(full);
+      const block = src ? imageBlock(src[1]) : null;
+      if (block) blocks.push(block);
+      continue;
+    }
+
     const tag = match[1].toLowerCase();
-    const inner = match[2];
+    const inner = full
+      .replace(new RegExp(`^<${tag}\\b[^>]*>`, "i"), "")
+      .replace(new RegExp(`</${tag}>$`, "i"), "");
 
     if (tag === "ul" || tag === "ol") {
       const items: string[] = [];
@@ -245,26 +344,40 @@ function htmlToEditorBlocks(html: string): EditorJsOutput {
       continue;
     }
 
-    const text = inner.replace(/<[^>]+>/g, "").trim();
-    if (!text) continue;
+    if (tag === "figure") {
+      const caption =
+        /<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i
+          .exec(inner)?.[1]
+          ?.replace(/<[^>]+>/g, "")
+          .trim() ?? "";
+      appendHtmlWithImages(blocks, inner, caption);
+      continue;
+    }
 
     if (tag.startsWith("h")) {
-      blocks.push({
-        type: "header",
-        data: { text, level: Number(tag[1]) },
-      });
-    } else if (tag === "p") {
-      blocks.push({ type: "paragraph", data: { text } });
-    } else if (tag === "blockquote") {
-      blocks.push({ type: "quote", data: { text, caption: "" } });
+      const text = inner.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (text) {
+        blocks.push({
+          type: "header",
+          data: { text, level: Number(tag[1]) },
+        });
+      }
+      continue;
     }
+
+    if (tag === "blockquote") {
+      const text = inner.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      if (text) {
+        blocks.push({ type: "quote", data: { text, caption: "" } });
+      }
+      continue;
+    }
+
+    appendHtmlWithImages(blocks, inner);
   }
 
-  if (blocks.length === 0) {
-    const text = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-    if (text) {
-      blocks.push({ type: "paragraph", data: { text } });
-    }
+  if (!found) {
+    appendHtmlWithImages(blocks, html);
   }
 
   return { blocks };
@@ -280,8 +393,21 @@ export function htmlToEditorJsJson(html: string): string {
 
 export function parseEditorValue(value: string): EditorJsOutput {
   if (!value?.trim()) return { blocks: [] };
-  if (isEditorJsContent(value)) {
-    return JSON.parse(value) as EditorJsOutput;
+
+  try {
+    if (isEditorJsContent(value)) {
+      const json = JSON.parse(value) as EditorJsOutput;
+      return {
+        blocks: json.blocks.flatMap((block) => {
+          if (block.type !== "image") return [block];
+          const normalized = normalizeImageBlock(block);
+          return normalized ? [normalized] : [];
+        }),
+      };
+    }
+  } catch (error) {
+    console.warn("JSON parse failed:", error);
   }
+
   return htmlToEditorBlocks(cleanHtmlContent(value));
 }

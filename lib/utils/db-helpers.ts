@@ -613,15 +613,27 @@ export async function getHistoryTimelinePaginated(
   return toPaginatedResult(data, count, currentPage, error?.message ?? null);
 }
 
-export async function getHistoryEventById(id: string): Promise<DbResult<ClubHistory>> {
-  const supabase = await createClient();
+export type HistoryEventDetail = Pick<
+  ClubHistory,
+  "id" | "title" | "content" | "event_date" | "image_url" | "order_index"
+>;
 
-  const { data, error } = await isNotDeleted(supabase.from("club_history").select("*"))
-    .eq("id", id)
-    .maybeSingle();
+/** Một mốc lịch sử, không kèm comments. cache() để generateMetadata và page dùng chung 1 query. */
+export const getHistoryEventById = cache(
+  async (id: string): Promise<DbResult<HistoryEventDetail>> => {
+    const supabase = await createClient();
 
-  return { data, error: error?.message ?? null };
-}
+    const { data, error } = await isNotDeleted(
+      supabase
+        .from("club_history")
+        .select("id, title, content, event_date, image_url, order_index")
+    )
+      .eq("id", id)
+      .maybeSingle();
+
+    return { data, error: error?.message ?? null };
+  }
+);
 
 export async function addHistoryEntry(
   data: ClubHistoryInsert

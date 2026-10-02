@@ -3,12 +3,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClubInfoEditor } from "@/components/admin/ClubInfoEditor";
 import { HistoryManager } from "@/components/admin/HistoryManager";
 import { getClubInfo, getHistory } from "@/app/actions/clubInfoActions";
+import { firstSearchParam } from "@/lib/utils/pagination";
 
 export const metadata: Metadata = {
   title: "Quản lý Giới thiệu & Lịch sử",
 };
 
-export default async function AdminClubInfoPage() {
+type AdminClubInfoPageProps = {
+  searchParams: Promise<{ tab?: string; year?: string }>;
+};
+
+export default async function AdminClubInfoPage({
+  searchParams,
+}: AdminClubInfoPageProps) {
+  const params = await searchParams;
+  const tab = firstSearchParam(params.tab) === "history" ? "history" : "intro";
+  const year = firstSearchParam(params.year);
   const [clubInfo, history] = await Promise.all([getClubInfo(), getHistory()]);
 
   return (
@@ -20,7 +30,7 @@ export default async function AdminClubInfoPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="intro" className="space-y-6">
+      <Tabs defaultValue={tab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="intro">Giới thiệu CLB</TabsTrigger>
           <TabsTrigger value="history">Lịch sử CLB</TabsTrigger>
@@ -31,7 +41,7 @@ export default async function AdminClubInfoPage() {
         </TabsContent>
 
         <TabsContent value="history">
-          <HistoryManager items={history} />
+          <HistoryManager items={history} year={year} />
         </TabsContent>
       </Tabs>
     </div>

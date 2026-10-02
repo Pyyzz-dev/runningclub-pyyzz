@@ -28,6 +28,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+const INITIAL_VISIBLE_COMMENTS = 5;
 import { toast } from "sonner";
 
 interface HistoryCommentSectionProps {
@@ -53,6 +55,12 @@ export function HistoryCommentSection({
   const [loading, setLoading] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const displayedComments = expanded
+    ? comments
+    : comments.slice(0, INITIAL_VISIBLE_COMMENTS);
+  const hiddenCount = Math.max(comments.length - INITIAL_VISIBLE_COMMENTS, 0);
 
   useEffect(() => {
     setComments(initialComments);
@@ -188,7 +196,8 @@ export function HistoryCommentSection({
             Chưa có bình luận nào. Hãy là người đầu tiên!
           </p>
         ) : (
-          comments.map((comment) => {
+          <>
+          {displayedComments.map((comment) => {
             const initials = comment.is_anonymous
               ? "?"
               : comment.display_name
@@ -249,7 +258,17 @@ export function HistoryCommentSection({
                 </div>
               </div>
             );
-          })
+          })}
+          {!expanded && hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="text-sm text-blue-600 hover:underline"
+            >
+              Xem thêm {hiddenCount} bình luận
+            </button>
+          )}
+          </>
         )}
       </div>
 

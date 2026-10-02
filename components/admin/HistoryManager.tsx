@@ -20,6 +20,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { ClubHistory } from "@/lib/supabase/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -42,12 +49,20 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Edit, GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface HistoryManagerProps {
   items: ClubHistory[];
+  year?: string;
   className?: string;
+}
+
+function historyYear(eventDate: string): string {
+  const match = /^(\d{4})/.exec(eventDate);
+  if (match) return match[1];
+  const parsed = new Date(eventDate).getFullYear();
+  return Number.isFinite(parsed) ? String(parsed) : "";
 }
 
 function SortableHistoryItem({
@@ -125,7 +140,11 @@ function SortableHistoryItem({
   );
 }
 
-export function HistoryManager({ items: initialItems, className }: HistoryManagerProps) {
+export function HistoryManager({
+  items: initialItems,
+  year,
+  className,
+}: HistoryManagerProps) {
   const router = useRouter();
   const [items, setItems] = useState(initialItems);
 
@@ -138,6 +157,28 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const availableYears = useMemo(() => {
+    const years = [
+      ...new Set(items.map((item) => historyYear(item.event_date)).filter(Boolean)),
+    ];
+    return years.sort((a, b) => Number(b) - Number(a));
+  }, [items]);
+
+  const selectedYear =
+    year && availableYears.includes(year) ? year : (availableYears[0] ?? "");
+
+  const filteredItems = useMemo(
+    () => items.filter((item) => historyYear(item.event_date) === selectedYear),
+    [items, selectedYear]
+  );
+
+  const handleYearChange = (nextYear: string) => {
+    const params = new URLSearchParams();
+    params.set("tab", "history");
+    params.set("year", nextYear);
+    router.push(`/admin/club-info?${params.toString()}`);
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -149,12 +190,19 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = items.findIndex((i) => i.id === active.id);
-    const newIndex = items.findIndex((i) => i.id === over.id);
-    const reordered = arrayMove(items, oldIndex, newIndex);
-    setItems(reordered);
+    const oldIndex = filteredItems.findIndex((i) => i.id === active.id);
+    const newIndex = filteredItems.findIndex((i) => i.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
 
-    const result = await reorderHistoryEntries(reordered.map((i) => i.id));
+    const reorderedYear = arrayMove(filteredItems, oldIndex, newIndex);
+    const yearIds = new Set(filteredItems.map((item) => item.id));
+    const queue = [...reorderedYear];
+    const merged = items.map((item) =>
+      yearIds.has(item.id) ? (queue.shift() ?? item) : item
+    );
+    setItems(merged);
+
+    const result = await reorderHistoryEntries(merged.map((item) => item.id));
     if (result.error) {
       toast.error(result.error);
       setItems(initialItems);
@@ -202,7 +250,34 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
 
   return (
     <div className={cn("space-y-4", className)}>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <label htmlFor="history-year" className="text-sm font-medium">
+            Chọn năm:
+          </label>
+          <Select
+            value={selectedYear || undefined}
+            onValueChange={handleYearChange}
+            disabled={availableYears.length === 0}
+          >
+            <SelectTrigger id="history-year" className="w-[120px]">
+              <SelectValue placeholder="Chọn năm" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map((itemYear) => (
+                <SelectItem key={itemYear} value={itemYear}>
+                  {itemYear}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedYear ? (
+            <p className="text-sm text-muted-foreground">
+              Tổng: <strong>{filteredItems.length}</strong> mốc lịch sử trong năm{" "}
+              {selectedYear}
+            </p>
+          ) : null}
+        </div>
         <Button
           onClick={() => {
             setEditEntry(null);
@@ -218,6 +293,10 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
         <p className="py-8 text-center text-muted-foreground">
           Chưa có mốc lịch sử nào.
         </p>
+      ) : filteredItems.length === 0 ? (
+        <p className="rounded-lg bg-muted/40 py-12 text-center text-muted-foreground">
+          Không có mốc lịch sử nào trong năm {selectedYear}
+        </p>
       ) : (
         <DndContext
           sensors={sensors}
@@ -225,11 +304,11 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={items.map((i) => i.id)}
+            items={filteredItems.map((i) => i.id)}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {items.map((item) => (
+              {filteredItems.map((item) => (
                 <SortableHistoryItem
                   key={item.id}
                   item={item}
@@ -249,7 +328,10 @@ export function HistoryManager({ items: initialItems, className }: HistoryManage
 
       <HistoryFormDialog
         open={formOpen}
-        onOpenChange={setFormOpen}
+        onOpenChange={(nextOpen) => {
+          setFormOpen(nextOpen);
+          if (!nextOpen) setEditEntry(null);
+        }}
         entry={editEntry}
         onSubmit={handleSubmit}
       />
