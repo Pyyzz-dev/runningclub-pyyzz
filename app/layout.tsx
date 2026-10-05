@@ -8,7 +8,7 @@ import { Header } from "@/components/layout/Header";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { fetchCurrentUser } from "@/app/actions/dataActions";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
-import { CLUB_DESCRIPTION, CLUB_LOGO_URL, CLUB_NAME } from "@/lib/site-config";
+import { CLUB_DESCRIPTION, CLUB_LOGO_URL, CLUB_NAME, getSiteUrl } from "@/lib/site-config";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -19,7 +19,10 @@ const beVietnamPro = Be_Vietnam_Pro({
   variable: "--font-be-vietnam",
 });
 
+const siteUrl = getSiteUrl();
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: CLUB_NAME,
     template: `%s | ${CLUB_NAME}`,
@@ -33,7 +36,24 @@ export const metadata: Metadata = {
   openGraph: {
     title: CLUB_NAME,
     description: CLUB_DESCRIPTION,
-    images: [{ url: CLUB_LOGO_URL, alt: CLUB_NAME }],
+    url: siteUrl,
+    siteName: CLUB_NAME,
+    images: [
+      {
+        url: "/logo_runningclub_wb_512x512.png",
+        width: 512,
+        height: 512,
+        alt: CLUB_NAME,
+      },
+    ],
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: CLUB_NAME,
+    description: CLUB_DESCRIPTION,
+    images: ["/logo_runningclub_wb_512x512.png"],
   },
 };
 

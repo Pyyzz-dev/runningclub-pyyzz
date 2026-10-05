@@ -10,7 +10,7 @@ import {
   getCurrentUser,
   getEventById,
   getHistoryEventById,
-  getHistoryTimelinePaginated,
+  getHistoryTimelineList,
   getHomepagePosts,
   getLeaderboard,
   getPostById,
@@ -64,8 +64,8 @@ export async function fetchTrainingById(id: string) {
   return getTrainingById(id);
 }
 
-export async function fetchHistoryTimelinePaginated(page: number) {
-  return getHistoryTimelinePaginated(page);
+export async function fetchHistoryTimeline() {
+  return getHistoryTimelineList();
 }
 
 export async function fetchHistoryEventById(id: string) {

@@ -590,27 +590,18 @@ export async function getHistoryTimeline(): Promise<DbResult<ClubHistory[]>> {
   return { data, error: error?.message ?? null };
 }
 
-export async function getHistoryTimelinePaginated(
-  page: number
-): Promise<PaginatedResult<Pick<ClubHistory, "id" | "title" | "event_date">>> {
+export async function getHistoryTimelineList(): Promise<
+  DbResult<Pick<ClubHistory, "id" | "title" | "event_date">[]>
+> {
   const supabase = await createClient();
-  const { from, to, currentPage } = getPaginationRange(page);
 
-  const { data, error, count } = await isNotDeleted(
-    supabase.from("club_history").select("id, title, event_date", { count: "exact" })
+  const { data, error } = await isNotDeleted(
+    supabase.from("club_history").select("id, title, event_date")
   )
     .order("order_index", { ascending: true })
-    .order("event_date", { ascending: false })
-    .range(from, to);
+    .order("event_date", { ascending: false });
 
-  if (isUnsatisfiableRangeError(error)) {
-    const { count: total } = await isNotDeleted(
-      supabase.from("club_history").select("id", { count: "exact", head: true })
-    );
-    return toPaginatedResult([], total, currentPage, null);
-  }
-
-  return toPaginatedResult(data, count, currentPage, error?.message ?? null);
+  return { data, error: error?.message ?? null };
 }
 
 export type HistoryEventDetail = Pick<

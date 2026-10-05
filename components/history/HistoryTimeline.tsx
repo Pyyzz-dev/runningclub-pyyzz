@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { compareEventDates, formatDate, getYearFromDateString } from "@/lib/format";
@@ -25,6 +26,7 @@ interface HistoryTimelineProps {
 
 const SCROLL_OFFSET = 96;
 const HIGHLIGHT_MS = 3000;
+const EVENTS_PER_BATCH = 4;
 
 function groupByYear(items: HistoryTimelineEvent[]): YearGroup[] {
   const grouped = new Map<number, HistoryTimelineEvent[]>();
@@ -96,34 +98,90 @@ function EventCard({
       <p className="text-xs text-muted-foreground" suppressHydrationWarning>
         {formatDate(event.event_date)}
       </p>
-      <p className="mt-1 text-sm font-medium text-foreground hover:text-blue-600 hover:underline">
+      <p className="mt-1 text-sm font-medium leading-snug text-foreground hover:text-blue-600 hover:underline">
         {event.title}
       </p>
     </Link>
   );
 }
 
-function DesktopYearRow({
+function YearPager({
+  page,
+  totalPages,
+  onPrev,
+  onNext,
+  className,
+}: {
+  page: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+  className?: string;
+}) {
+  const hasPrev = page > 1;
+  const hasNext = page < totalPages;
+
+  return (
+    <div className={cn("flex flex-col items-center gap-2 text-center", className)}>
+      <p className="text-xs font-medium text-muted-foreground">
+        Trang {page} / {totalPages}
+      </p>
+      <div className="flex flex-wrap justify-center gap-2">
+        {hasPrev ? (
+          <Button type="button" variant="outline" size="sm" onClick={onPrev} className="gap-1">
+            <ChevronLeft className="h-4 w-4" />
+            Trước
+          </Button>
+        ) : null}
+        {hasNext ? (
+          <Button type="button" variant="outline" size="sm" onClick={onNext} className="gap-1">
+            Xem tiếp
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function YearSection({
   year,
   events,
   isSelected,
   yearRef,
-  hoveredEventId,
-  onHover,
 }: {
   year: number;
   events: HistoryTimelineEvent[];
   isSelected: boolean;
   yearRef: (el: HTMLDivElement | null) => void;
-  hoveredEventId: string | null;
-  onHover: (id: string | null) => void;
 }) {
+  const [pageIndex, setPageIndex] = useState(0);
+  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
+  const totalPages = Math.max(1, Math.ceil(events.length / EVENTS_PER_BATCH));
+  const hasPager = events.length > EVENTS_PER_BATCH;
+  const safePageIndex = Math.min(pageIndex, totalPages - 1);
+  const pageEvents = events.slice(
+    safePageIndex * EVENTS_PER_BATCH,
+    safePageIndex * EVENTS_PER_BATCH + EVENTS_PER_BATCH
+  );
+  const page = safePageIndex + 1;
+  const justifyClass =
+    pageEvents.length < EVENTS_PER_BATCH ? "justify-start" : "justify-between";
+
+  const showNext = () => {
+    setPageIndex((current) => Math.min(current + 1, totalPages - 1));
+  };
+
+  const showPrev = () => {
+    setPageIndex((current) => Math.max(current - 1, 0));
+  };
+
   return (
     <div
       ref={yearRef}
       className={cn(
-        "scroll-mt-24 rounded-2xl p-4 transition-all duration-500",
-        isSelected && "animate-pulse bg-blue-50/60 ring-2 ring-blue-500"
+        "scroll-mt-24 rounded-2xl transition-all duration-500",
+        isSelected && "animate-pulse bg-blue-50/60 p-4 ring-2 ring-blue-500"
       )}
     >
       <div className="mb-6 flex items-center gap-4">
@@ -138,11 +196,37 @@ function DesktopYearRow({
         <div className="h-0.5 flex-1 bg-border" />
       </div>
 
-      <div className="relative min-h-[168px] py-4">
-        <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border" />
+      <div className="space-y-4 border-l-4 border-blue-200 pl-6 md:hidden">
+        {pageEvents.map((event) => (
+          <Link
+            key={event.id}
+            href={`/history/${event.id}`}
+            className="block rounded-lg border bg-card p-3 shadow-sm transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-md"
+          >
+            <p className="text-xs text-muted-foreground" suppressHydrationWarning>
+              {formatDate(event.event_date)}
+            </p>
+            <p className="mt-1 text-sm font-medium leading-5 text-foreground hover:text-blue-600 hover:underline">
+              {event.title}
+            </p>
+          </Link>
+        ))}
+      </div>
 
-        <div className="relative flex min-h-[168px] justify-between gap-2">
-          {events.map((event, index) => {
+      {hasPager ? (
+        <YearPager
+          page={page}
+          totalPages={totalPages}
+          onPrev={showPrev}
+          onNext={showNext}
+          className="mt-6 md:hidden"
+        />
+      ) : null}
+
+      <div className="relative hidden h-80 overflow-x-auto overflow-y-hidden md:block">
+        <div className={cn("relative flex h-full min-w-full items-center gap-8", justifyClass)}>
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 z-0 h-0.5 -translate-y-1/2 bg-border" />
+          {pageEvents.map((event, index) => {
             const isTop = index % 2 === 0;
             const isDimmed = Boolean(hoveredEventId && hoveredEventId !== event.id);
             const isHighlighted = hoveredEventId === event.id;
@@ -150,18 +234,11 @@ function DesktopYearRow({
             return (
               <div
                 key={event.id}
-                className="relative min-w-0 flex-1"
-                onMouseEnter={() => onHover(event.id)}
-                onMouseLeave={() => onHover(null)}
+                className="relative h-full w-[220px] shrink-0"
+                onMouseEnter={() => setHoveredEventId(event.id)}
+                onMouseLeave={() => setHoveredEventId(null)}
               >
-                <div className="absolute left-1/2 top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-500 bg-background" />
-
-                <div
-                  className={cn(
-                    "absolute left-0 right-0 px-1",
-                    isTop ? "bottom-[calc(50%+0.625rem)]" : "top-[calc(50%+0.625rem)]"
-                  )}
-                >
+                <div className={cn("absolute inset-x-0", isTop ? "bottom-1/2 mb-6" : "top-1/2 mt-6")}>
                   <EventCard
                     event={event}
                     isDimmed={isDimmed}
@@ -169,54 +246,24 @@ function DesktopYearRow({
                     className="text-center"
                   />
                 </div>
+                <div className="absolute left-1/2 top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-500 bg-background" />
               </div>
             );
           })}
+          {hasPager ? (
+            <div className="z-10 flex h-full w-[200px] shrink-0 items-center justify-center">
+              <div className="bg-background px-3">
+                <YearPager
+                  page={page}
+                  totalPages={totalPages}
+                  onPrev={showPrev}
+                  onNext={showNext}
+                  className="rounded-lg border bg-card p-3 shadow-sm"
+                />
+              </div>
+            </div>
+          ) : null}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MobileYearRow({
-  year,
-  events,
-  isSelected,
-  yearRef,
-}: {
-  year: number;
-  events: HistoryTimelineEvent[];
-  isSelected: boolean;
-  yearRef: (el: HTMLDivElement | null) => void;
-}) {
-  return (
-    <div
-      ref={yearRef}
-      className={cn(
-        "scroll-mt-24 border-l-4 border-blue-200 pb-8 pl-6 transition-all duration-500",
-        isSelected && "animate-pulse rounded-lg border-blue-600 bg-blue-50/60 p-4 ring-2 ring-blue-500"
-      )}
-    >
-      <h2 className="mb-4 font-display text-2xl font-bold text-blue-600">{year}</h2>
-
-      <div className="space-y-4">
-        {events.map((event) => (
-          <Link
-            key={event.id}
-            href={`/history/${event.id}`}
-            className={cn(
-              "block rounded-lg border bg-card p-3 shadow-sm transition-all duration-300 hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-md",
-              isSelected && "border-blue-500"
-            )}
-          >
-            <p className="text-xs text-muted-foreground" suppressHydrationWarning>
-              {formatDate(event.event_date)}
-            </p>
-            <p className="mt-1 text-sm font-medium text-foreground hover:text-blue-600 hover:underline">
-              {event.title}
-            </p>
-          </Link>
-        ))}
       </div>
     </div>
   );
@@ -225,7 +272,6 @@ function MobileYearRow({
 export function HistoryTimeline({ items, className }: HistoryTimelineProps) {
   const [searchYear, setSearchYear] = useState("");
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const yearRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const data = useMemo(() => groupByYear(items), [items]);
@@ -267,10 +313,9 @@ export function HistoryTimeline({ items, className }: HistoryTimelineProps) {
         />
       </div>
 
-      {/* Mobile: vertical timeline */}
-      <div className="space-y-8 md:hidden">
+      <div className="space-y-12">
         {data.map(({ year, events }) => (
-          <MobileYearRow
+          <YearSection
             key={year}
             year={year}
             events={events}
@@ -278,23 +323,6 @@ export function HistoryTimeline({ items, className }: HistoryTimelineProps) {
             yearRef={(el) => {
               yearRefs.current[year] = el;
             }}
-          />
-        ))}
-      </div>
-
-      {/* Desktop: horizontal timeline per year */}
-      <div className="hidden space-y-12 md:block">
-        {data.map(({ year, events }) => (
-          <DesktopYearRow
-            key={year}
-            year={year}
-            events={events}
-            isSelected={selectedYear === year}
-            yearRef={(el) => {
-              yearRefs.current[year] = el;
-            }}
-            hoveredEventId={hoveredEventId}
-            onHover={setHoveredEventId}
           />
         ))}
       </div>
