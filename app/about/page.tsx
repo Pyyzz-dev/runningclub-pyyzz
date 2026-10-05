@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { getClubInfo } from "@/app/actions/clubInfoActions";
@@ -26,16 +25,16 @@ export default async function AboutPage() {
       />
 
       {clubInfo?.cover_image_url && (
-        <div className="relative mb-8 aspect-[21/9] overflow-hidden rounded-xl">
-          <Image
-            src={clubInfo.cover_image_url}
-            alt="Giới thiệu CLB"
-            fill
-            sizes="(max-width: 896px) 100vw, 896px"
-            className="object-cover"
-            priority
-          />
-        </div>
+        // Ảnh gốc trên Storage, không qua bộ nén của next/image.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={clubInfo.cover_image_url}
+          alt="Giới thiệu CLB"
+          className="mb-8 h-auto w-full rounded-xl"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+        />
       )}
 
       {clubInfo?.content ? (

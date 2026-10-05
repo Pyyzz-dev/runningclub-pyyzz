@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { ClubInfo } from "@/lib/supabase/types";
 import { Loader2, Save } from "lucide-react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -68,6 +67,7 @@ export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
             currentImage={coverUrl}
             onImageUploaded={setCoverUrl}
             label="Tải ảnh bìa lên"
+            compress={false}
           />
         </div>
 
@@ -91,9 +91,12 @@ export function ClubInfoEditor({ initialData }: ClubInfoEditorProps) {
       <div className="space-y-4 rounded-lg border bg-white p-4">
         <h2 className="font-display text-lg font-semibold">Xem trước</h2>
         {coverUrl && (
-          <div className="relative mb-4 aspect-video overflow-hidden rounded-md">
-            <Image src={coverUrl} alt="Cover" fill className="object-cover" />
-          </div>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={coverUrl}
+            alt="Ảnh bìa giới thiệu CLB"
+            className="mb-4 h-auto w-full rounded-md"
+          />
         )}
         <div
           className="prose max-w-none [&_img]:max-w-full [&_img]:rounded-md"

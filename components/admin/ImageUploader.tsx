@@ -16,6 +16,7 @@ interface ImageUploaderProps {
   label?: string;
   className?: string;
   showPreview?: boolean;
+  compress?: boolean;
 }
 
 export function ImageUploader({
@@ -25,6 +26,7 @@ export function ImageUploader({
   label = "Tải ảnh lên",
   className,
   showPreview = true,
+  compress = true,
 }: ImageUploaderProps) {
   const inputId = useId();
   const [uploading, setUploading] = useState(false);
@@ -48,13 +50,15 @@ export function ImageUploader({
     setUploading(true);
 
     let fileToUpload = file;
-    try {
-      fileToUpload = await compressImage(file);
-      console.log(
-        `Ảnh đã nén: ${(fileToUpload.size / 1024).toFixed(2)} KB (từ ${(file.size / 1024).toFixed(2)} KB)`
-      );
-    } catch (compressError) {
-      console.warn("Nén ảnh thất bại, upload ảnh gốc:", compressError);
+    if (compress) {
+      try {
+        fileToUpload = await compressImage(file);
+        console.log(
+          `Ảnh đã nén: ${(fileToUpload.size / 1024).toFixed(2)} KB (từ ${(file.size / 1024).toFixed(2)} KB)`
+        );
+      } catch (compressError) {
+        console.warn("Nén ảnh thất bại, upload ảnh gốc:", compressError);
+      }
     }
 
     const formData = new FormData();
