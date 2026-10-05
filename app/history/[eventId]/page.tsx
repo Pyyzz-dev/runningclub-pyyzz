@@ -13,6 +13,7 @@ import { HistoryCommentSection } from "@/components/history/HistoryCommentSectio
 import { CommentsSkeleton } from "@/components/skeletons/PostSkeleton";
 import { formatDate } from "@/lib/format";
 import { renderEditorContent } from "@/lib/utils/editorjs";
+import { createExcerpt, createMetadata } from "@/lib/utils/metadata";
 import { HistoryEventSkeleton } from "./loading";
 
 export const revalidate = 300;
@@ -24,7 +25,19 @@ type HistoryEventPageProps = {
 export async function generateMetadata({ params }: HistoryEventPageProps): Promise<Metadata> {
   const { eventId } = await params;
   const { data: event } = await fetchHistoryEventById(eventId);
-  return { title: event?.title ?? "Sự kiện lịch sử" };
+
+  if (!event) {
+    return { title: "Không tìm thấy mốc lịch sử" };
+  }
+
+  return createMetadata({
+    title: event.title,
+    description: createExcerpt(event.content, 160),
+    image: event.image_url,
+    url: `/history/${eventId}`,
+    type: "article",
+    publishedTime: event.event_date,
+  });
 }
 
 async function CommentsBlock({ historyId }: { historyId: string }) {

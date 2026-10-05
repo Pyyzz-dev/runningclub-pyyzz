@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { createExcerpt, createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 3600;
 
@@ -46,7 +47,23 @@ type ParticipantRow = {
 export async function generateMetadata({ params }: EventDetailPageProps): Promise<Metadata> {
   const { eventId } = await params;
   const { data: event } = await fetchEventById(eventId);
-  return { title: event?.name ?? "Chi tiết sự kiện" };
+
+  if (!event) {
+    return { title: "Không tìm thấy sự kiện" };
+  }
+
+  const description = [event.description?.trim(), event.location?.trim() && `Địa điểm: ${event.location.trim()}`]
+    .filter(Boolean)
+    .join(" — ");
+
+  return createMetadata({
+    title: event.name,
+    description: createExcerpt(description, 160),
+    image: event.image_url,
+    url: `/events/${eventId}`,
+    type: "article",
+    publishedTime: event.event_date,
+  });
 }
 
 export default async function EventDetailPage({ params }: EventDetailPageProps) {

@@ -3,12 +3,19 @@ import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { getClubInfo } from "@/app/actions/clubInfoActions";
 import { renderEditorContent } from "@/lib/utils/editorjs";
+import { createExcerpt, createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
-  title: "Giới thiệu",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const clubInfo = await getClubInfo();
+  return createMetadata({
+    title: "Giới thiệu CLB",
+    description: createExcerpt(clubInfo?.content ?? "", 160),
+    image: clubInfo?.cover_image_url,
+    url: "/about",
+  });
+}
 
 export default async function AboutPage() {
   const clubInfo = await getClubInfo();

@@ -14,26 +14,14 @@ import {
   fetchPostDetail,
 } from "@/app/actions/dataActions";
 import { formatPublishedAt } from "@/lib/format";
-import { CLUB_DESCRIPTION, CLUB_NAME, getSiteUrl } from "@/lib/site-config";
-import { getPostExcerpt, renderEditorContent } from "@/lib/utils/editorjs";
+import { renderEditorContent } from "@/lib/utils/editorjs";
+import { createExcerpt, createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 300;
 
 type PostDetailPageProps = {
   params: Promise<{ postId: string }>;
 };
-
-const FALLBACK_OG_IMAGE = "/logo_runningclub_wb_512x512.png";
-
-function toOgImageUrl(value: string | null): string | null {
-  const trimmed = value?.trim();
-  if (!trimmed || !/^https?:\/\//i.test(trimmed)) return null;
-
-  const queryIndex = trimmed.indexOf("?");
-  const path = queryIndex === -1 ? trimmed : trimmed.slice(0, queryIndex);
-  const query = queryIndex === -1 ? "" : trimmed.slice(queryIndex);
-  return `${path.replaceAll("&", "%26")}${query}`;
-}
 
 export async function generateMetadata({ params }: PostDetailPageProps): Promise<Metadata> {
   const { postId } = await params;
@@ -43,46 +31,14 @@ export async function generateMetadata({ params }: PostDetailPageProps): Promise
     return { title: "Bài viết không tồn tại" };
   }
 
-  const excerpt = getPostExcerpt(post.content, 160) || CLUB_DESCRIPTION;
-  const siteUrl = getSiteUrl();
-  const postUrl = `${siteUrl}/community/${postId}`;
-  const coverUrl = toOgImageUrl(post.cover_image_url);
-  const image =
-    coverUrl && /^https?:\/\//i.test(coverUrl)
-      ? {
-          url: coverUrl,
-          width: 1200,
-          height: 675,
-          alt: post.title,
-        }
-      : {
-          url: FALLBACK_OG_IMAGE,
-          width: 512,
-          height: 512,
-          alt: CLUB_NAME,
-        };
-
-  return {
+  return createMetadata({
     title: post.title,
-    description: excerpt,
-    alternates: { canonical: postUrl },
-    openGraph: {
-      title: post.title,
-      description: excerpt,
-      url: postUrl,
-      siteName: CLUB_NAME,
-      images: [image],
-      locale: "vi_VN",
-      type: "article",
-      ...(post.published_at ? { publishedTime: post.published_at } : {}),
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: post.title,
-      description: excerpt,
-      images: [image.url],
-    },
-  };
+    description: createExcerpt(post.content, 160),
+    image: post.cover_image_url,
+    url: `/community/${postId}`,
+    type: "article",
+    publishedTime: post.published_at ?? undefined,
+  });
 }
 
 async function CommentsBlock({ postId }: { postId: string }) {

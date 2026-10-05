@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Calendar, Trophy, Users } from "lucide-react";
 import { Section } from "@/components/common/Section";
@@ -8,8 +9,16 @@ import { Button } from "@/components/ui/button";
 import { HeroSection } from "@/components/home/HeroSection";
 import { fetchHomepageData } from "@/app/actions/dataActions";
 import { getPostExcerpt } from "@/lib/utils/editorjs";
+import { createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = createMetadata({
+  title: "Trang chủ",
+  description:
+    "Câu lạc bộ Chạy bộ CMC Global — nơi kết nối những người yêu chạy bộ, chia sẻ kinh nghiệm và cùng nhau tiến bộ mỗi ngày.",
+  url: "/",
+});
 
 export default async function HomePage() {
   const { posts, events, trainings, user, registeredMap } = await fetchHomepageData();

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -12,8 +13,35 @@ import { getTrainingStatus } from "@/lib/utils/trainingStatus";
 import { formatLongDate, formatTime } from "@/lib/format";
 import { TrainingDetailRegistrationSection } from "@/components/training/TrainingDetailRegistrationSection";
 import { HydrationSafeDateTime } from "@/components/common/HydrationSafeDateTime";
+import { createExcerpt, createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 60;
+
+export async function generateMetadata({ params }: TrainingDetailPageProps): Promise<Metadata> {
+  const { trainingId } = await params;
+  const supabase = await createClient();
+  const { data: training } = await isNotDeleted(
+    supabase.from("training_schedule").select("title, description, location, start_time")
+  )
+    .eq("id", trainingId)
+    .maybeSingle();
+
+  if (!training) {
+    return { title: "Không tìm thấy buổi tập" };
+  }
+
+  const description = [training.description?.trim(), training.location?.trim() && `Địa điểm: ${training.location.trim()}`]
+    .filter(Boolean)
+    .join(" — ");
+
+  return createMetadata({
+    title: training.title,
+    description: createExcerpt(description, 160),
+    url: `/training/${trainingId}`,
+    type: "article",
+    publishedTime: training.start_time,
+  });
+}
 
 type TrainingDetailPageProps = {
   params: Promise<{ trainingId: string }>;

@@ -3,12 +3,15 @@ import { Section } from "@/components/common/Section";
 import { Breadcrumb } from "@/components/common/Breadcrumb";
 import { HistoryTimeline } from "@/components/history/HistoryTimeline";
 import { fetchHistoryTimeline } from "@/app/actions/dataActions";
+import { createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 3600;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: "Phòng truyền thống",
-};
+  description: "Hành trình phát triển của CLB Chạy bộ CMC Global qua các năm.",
+  url: "/history",
+});
 
 export default async function HistoryPage() {
   const result = await fetchHistoryTimeline();

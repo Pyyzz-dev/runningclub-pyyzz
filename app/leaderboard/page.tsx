@@ -7,10 +7,13 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { LeaderboardNote } from "@/components/modules/LeaderboardNote";
 import { LeaderboardTableWithRefresh } from "@/components/modules/LeaderboardTableWithRefresh";
 import { parsePageParam } from "@/lib/utils/pagination";
+import { createMetadata } from "@/lib/utils/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: "Bảng xếp hạng",
-};
+  description: "Bảng xếp hạng thành tích chạy bộ của các thành viên CLB Chạy bộ CMC Global.",
+  url: "/leaderboard",
+});
 
 export const revalidate = 600;
 

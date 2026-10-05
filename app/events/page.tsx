@@ -13,12 +13,15 @@ import {
 import { getUserEventParticipations } from "@/app/actions/eventParticipantActions";
 import { ITEMS_PER_PAGE, parsePageParam } from "@/lib/utils/pagination";
 import { redirectIfPageOutOfRange } from "@/lib/utils/pagination-redirect";
+import { createMetadata } from "@/lib/utils/metadata";
 
 export const revalidate = 0;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: "Sự kiện",
-};
+  description: "Các giải chạy và hoạt động sắp diễn ra của CLB Chạy bộ CMC Global.",
+  url: "/events",
+});
 
 type EventsPageProps = {
   searchParams: Promise<{
