@@ -3,6 +3,7 @@ import { cache } from "react";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { isNotDeleted, softDelete } from "@/lib/utils/softDelete";
 import {
+  COMMUNITY_ITEMS_PER_PAGE,
   escapeIlike,
   emptyPaginated,
   getPaginationRange,
@@ -224,62 +225,52 @@ async function mapPostsWithCommentCounts(
 export async function getAllPosts(
   viewerIsAdmin = false,
   page = 1,
-  tab: CommunityTab = "all"
+  tab: CommunityTab = "all",
+  search = ""
 ): Promise<PaginatedResult<PostWithAuthorAndCount>> {
   const supabase = await createClient();
-  const { from, to, currentPage } = getPaginationRange(page);
+  const { from, to, currentPage } = getPaginationRange(page, COMMUNITY_ITEMS_PER_PAGE);
+  const trimmedSearch = search.trim();
+  const escapedSearch = trimmedSearch ? escapeIlike(trimmedSearch) : "";
   const selectClause = `
       *,
       author:users!posts_author_id_fkey(id, full_name, avatar_url)
     `;
 
-  if (tab === "featured") {
-    const featuredIds = await getFeaturedPublishedPostIds(viewerIsAdmin);
-    if (featuredIds.length === 0) {
-      return emptyPaginated(currentPage);
-    }
-
-    const { data, error, count } = await isNotDeleted(
-      supabase.from("posts").select(selectClause, { count: "exact" })
-    )
-      .eq("status", "published")
-      .in("id", featuredIds)
-      .order("published_at", { ascending: false })
-      .range(from, to);
-
-    if (error) {
-      if (isUnsatisfiableRangeError(error)) {
-        const { count: total } = await isNotDeleted(
-          supabase.from("posts").select("id", { count: "exact", head: true })
-        )
-          .eq("status", "published")
-          .in("id", featuredIds);
-        return toPaginatedResult([], total, currentPage, null);
-      }
-      return emptyPaginated(currentPage, error.message);
-    }
-
-    const mapped = await mapPostsWithCommentCounts(
-      (data ?? []) as PostWithAuthor[],
-      viewerIsAdmin
-    );
-
-    return toPaginatedResult(mapped, count, currentPage, null);
+  const featuredIds =
+    tab === "featured" ? await getFeaturedPublishedPostIds(viewerIsAdmin) : null;
+  if (featuredIds && featuredIds.length === 0) {
+    return emptyPaginated(currentPage);
   }
 
-  const { data, error, count } = await isNotDeleted(
+  let query = isNotDeleted(
     supabase.from("posts").select(selectClause, { count: "exact" })
   )
     .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .range(from, to);
+    .order("published_at", { ascending: false, nullsFirst: false });
+
+  if (featuredIds) {
+    query = query.in("id", featuredIds);
+  }
+  if (escapedSearch) {
+    query = query.ilike("title", `%${escapedSearch}%`);
+  }
+
+  const { data, error, count } = await query.range(from, to);
 
   if (error) {
     if (isUnsatisfiableRangeError(error)) {
-      const { count: total } = await isNotDeleted(
+      let countQuery = isNotDeleted(
         supabase.from("posts").select("id", { count: "exact", head: true })
       ).eq("status", "published");
-      return toPaginatedResult([], total, currentPage, null);
+      if (featuredIds) {
+        countQuery = countQuery.in("id", featuredIds);
+      }
+      if (escapedSearch) {
+        countQuery = countQuery.ilike("title", `%${escapedSearch}%`);
+      }
+      const { count: total } = await countQuery;
+      return toPaginatedResult([], total, currentPage, null, COMMUNITY_ITEMS_PER_PAGE);
     }
     return emptyPaginated(currentPage, error.message);
   }
@@ -289,7 +280,7 @@ export async function getAllPosts(
     viewerIsAdmin
   );
 
-  return toPaginatedResult(mapped, count, currentPage, null);
+  return toPaginatedResult(mapped, count, currentPage, null, COMMUNITY_ITEMS_PER_PAGE);
 }
 
 /** Trang chủ: chỉ lấy cột cần thiết, giới hạn số lượng */

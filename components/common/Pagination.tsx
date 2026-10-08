@@ -13,6 +13,7 @@ interface PaginationProps {
   totalPages: number;
   totalItems: number;
   itemsPerPage?: number;
+  itemLabel?: string;
   onPageChange?: (page: number) => void;
   className?: string;
 }
@@ -33,6 +34,7 @@ function PaginationControls({
   totalPages,
   totalItems,
   itemsPerPage = ITEMS_PER_PAGE,
+  itemLabel,
   onPageChange,
   className,
 }: PaginationProps) {
@@ -66,6 +68,7 @@ function PaginationControls({
       <p className="text-sm text-muted-foreground">
         Hiển thị <strong>{startItem}</strong> - <strong>{endItem}</strong> /{" "}
         <strong>{totalItems}</strong>
+        {itemLabel ? ` ${itemLabel}` : ""}
       </p>
 
       <div className="flex items-center gap-1">

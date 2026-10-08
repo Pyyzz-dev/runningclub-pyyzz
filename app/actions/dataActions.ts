@@ -39,9 +39,10 @@ export async function fetchCurrentUser() {
 export async function fetchAllPosts(
   viewerIsAdmin = false,
   page = 1,
-  tab: CommunityTab = "all"
+  tab: CommunityTab = "all",
+  search = ""
 ) {
-  return getAllPosts(viewerIsAdmin, page, tab);
+  return getAllPosts(viewerIsAdmin, page, tab, search);
 }
 
 export async function fetchAllPostsAdmin() {

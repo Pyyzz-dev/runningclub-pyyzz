@@ -6,8 +6,9 @@ import { PostCard } from "@/components/cards/PostCard";
 import { CommunitySection } from "@/components/modules/CommunitySection";
 import { fetchAllPosts, fetchCurrentUser } from "@/app/actions/dataActions";
 import { getPostExcerpt } from "@/lib/utils/editorjs";
+import { createMetadata } from "@/lib/utils/metadata";
 import {
-  ITEMS_PER_PAGE,
+  COMMUNITY_ITEMS_PER_PAGE,
   parseCommunityTab,
   parsePageParam,
 } from "@/lib/utils/pagination";
@@ -15,24 +16,27 @@ import { redirectIfPageOutOfRange } from "@/lib/utils/pagination-redirect";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: "Cộng đồng",
-};
+  description: "Chia sẻ, kết nối và truyền cảm hứng cùng nhau - CLB Chạy bộ CMC Global",
+  url: "/community",
+});
 
 type CommunityPageProps = {
-  searchParams: Promise<{ page?: string; tab?: string }>;
+  searchParams: Promise<{ page?: string; tab?: string; search?: string }>;
 };
 
 export default async function CommunityPage({ searchParams }: CommunityPageProps) {
   const params = await searchParams;
   const currentPage = parsePageParam(params.page);
   const tab = parseCommunityTab(params.tab);
+  const search = params.search?.trim() ?? "";
   const { data: user } = await fetchCurrentUser();
   const isAdmin = user?.role === "admin";
-  const result = await fetchAllPosts(isAdmin, currentPage, tab);
+  const result = await fetchAllPosts(isAdmin, currentPage, tab, search);
   redirectIfPageOutOfRange(
     "/community",
-    { page: params.page, tab: params.tab },
+    { page: params.page, tab: params.tab, search: search || undefined },
     currentPage,
     result.totalPages,
     result.count
@@ -54,7 +58,8 @@ export default async function CommunityPage({ searchParams }: CommunityPageProps
           currentPage={result.currentPage}
           totalPages={result.totalPages}
           totalItems={result.count}
-          itemsPerPage={ITEMS_PER_PAGE}
+          itemsPerPage={COMMUNITY_ITEMS_PER_PAGE}
+          search={search}
         >
             <div className="grid items-stretch gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {result.data.map((post, index) => (
